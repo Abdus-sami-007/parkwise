@@ -1,9 +1,20 @@
-
 "use client";
 
 import { create } from 'zustand';
-import { UserProfile, ParkingLand, ParkingSlot, Booking } from '@/lib/types';
-import { MOCK_LANDS, generateMockSlots } from '@/lib/mock-data';
+import { ParkingLand, ParkingSlot, Booking } from '@/lib/types';
+import { 
+  collection, 
+  onSnapshot, 
+  doc, 
+  updateDoc, 
+  addDoc, 
+  query, 
+  where,
+  getFirestore,
+  setDoc,
+  serverTimestamp
+} from 'firebase/firestore';
+import { initializeFirebase } from '@/firebase';
 
 interface ParkState {
   lands: ParkingLand[];
@@ -11,47 +22,75 @@ interface ParkState {
   bookings: Booking[];
   loading: boolean;
   
-  // Mutations (For prototype simulation)
-  updateSlotStatus: (landId: string, slotId: string, status: ParkingSlot['status'], vehicle?: string) => void;
-  createBooking: (booking: Omit<Booking, 'id'>) => void;
-  setLands: (lands: ParkingLand[]) => void;
-  setBookings: (bookings: Booking[]) => void;
+  // Real-time Sync
+  initSync: () => void;
+  
+  // Mutations
+  updateSlotStatus: (landId: string, slotId: string, status: ParkingSlot['status'], vehicle?: string) => Promise<void>;
+  createBooking: (booking: Omit<Booking, 'id'>) => Promise<void>;
 }
 
-export const useParkStore = create<ParkState>((set) => ({
-  lands: MOCK_LANDS,
-  slots: {
-    'land1': generateMockSlots('land1', 50),
-    'land2': generateMockSlots('land2', 30),
-  },
+export const useParkStore = create<ParkState>((set, get) => ({
+  lands: [],
+  slots: {},
   bookings: [],
-  loading: false,
+  loading: true,
 
-  setLands: (lands) => set({ lands }),
-  setBookings: (bookings) => set({ bookings }),
-
-  updateSlotStatus: (landId, slotId, status, vehicle) => set((state) => ({
-    slots: {
-      ...state.slots,
-      [landId]: (state.slots[landId] || []).map(slot => 
-        slot.id === slotId ? { ...slot, status, currentVehicle: vehicle } : slot
-      )
-    }
-  })),
-
-  createBooking: (bookingData) => set((state) => {
-    const newBooking: Booking = { ...bookingData, id: `booking-${Date.now()}` };
-    const updatedSlots = { ...state.slots };
+  initSync: () => {
+    const { db } = initializeFirebase();
     
-    if (updatedSlots[bookingData.landId]) {
-      updatedSlots[bookingData.landId] = updatedSlots[bookingData.landId].map(slot =>
-        slot.id === bookingData.slotId ? { ...slot, status: 'booked', bookedBy: bookingData.userId } : slot
-      );
-    }
+    // Sync Lands
+    const landsQuery = collection(db, 'parkingLands');
+    onSnapshot(landsQuery, (snapshot) => {
+      const lands = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ParkingLand));
+      set({ lands, loading: false });
 
-    return {
-      bookings: [...state.bookings, newBooking],
-      slots: updatedSlots
-    };
-  }),
+      // For each land, sync its slots
+      lands.forEach(land => {
+        const slotsQuery = collection(db, 'parkingLands', land.id, 'slots');
+        onSnapshot(slotsQuery, (slotSnap) => {
+          const landSlots = slotSnap.docs.map(d => ({ id: d.id, ...d.data() } as ParkingSlot));
+          set(state => ({
+            slots: { ...state.slots, [land.id]: landSlots }
+          }));
+        });
+      });
+    });
+
+    // Sync Bookings (global for simplicity in prototype)
+    const bookingsQuery = collection(db, 'bookings');
+    onSnapshot(bookingsQuery, (snapshot) => {
+      const bookings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Booking));
+      set({ bookings });
+    });
+  },
+
+  updateSlotStatus: async (landId, slotId, status, vehicle) => {
+    const { db } = initializeFirebase();
+    const slotRef = doc(db, 'parkingLands', landId, 'slots', slotId);
+    
+    await updateDoc(slotRef, {
+      status,
+      currentVehicle: vehicle || null,
+      updatedAt: serverTimestamp()
+    });
+  },
+
+  createBooking: async (bookingData) => {
+    const { db } = initializeFirebase();
+    
+    // 1. Create Booking Record
+    const bookingRef = await addDoc(collection(db, 'bookings'), {
+      ...bookingData,
+      createdAt: serverTimestamp()
+    });
+
+    // 2. Update Slot Status
+    const slotRef = doc(db, 'parkingLands', bookingData.landId, 'slots', bookingData.slotId);
+    await updateDoc(slotRef, {
+      status: 'booked',
+      bookedBy: bookingData.userId,
+      currentBookingId: bookingRef.id
+    });
+  },
 }));

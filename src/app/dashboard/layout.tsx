@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -11,6 +10,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { useUser, useFirestore } from "@/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { Loader2 } from "lucide-react";
+import { useParkStore } from "@/hooks/use-park-store";
 
 export default function DashboardLayout({
   children,
@@ -22,6 +22,12 @@ export default function DashboardLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [roleLoading, setRoleLoading] = useState(true);
+  const initSync = useParkStore(state => state.initSync);
+
+  useEffect(() => {
+    // Initialize real-time data sync once
+    initSync();
+  }, [initSync]);
 
   useEffect(() => {
     if (!authLoading && !user) {
