@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -61,7 +62,6 @@ export default function LoginPage() {
       const userDoc = await getDoc(doc(db, "users", result.user.uid));
 
       if (!userDoc.exists()) {
-        // Default new Google users to customer role
         const userData = {
           uid: result.user.uid,
           email: result.user.email,
@@ -171,9 +171,6 @@ export default function LoginPage() {
           <p className="text-sm text-muted-foreground">
             Don't have an account? <Link href="/signup" className="text-primary font-bold hover:underline">Create one</Link>
           </p>
-          <div className="text-[10px] text-muted-foreground uppercase tracking-widest">
-            Note: First time Google sign-in defaults to Customer role
-          </div>
         </CardFooter>
       </Card>
     </div>
