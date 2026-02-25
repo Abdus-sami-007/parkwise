@@ -1,8 +1,8 @@
-
 import type { Metadata } from 'next';
 import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
+import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
   title: 'ParkWise - Smart Parking Management',
@@ -30,6 +30,7 @@ export default function RootLayout({
         >
           <FirebaseClientProvider>
             {children}
+            <Toaster />
           </FirebaseClientProvider>
         </ThemeProvider>
       </body>
