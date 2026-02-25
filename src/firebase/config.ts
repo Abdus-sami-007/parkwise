@@ -1,9 +1,9 @@
 
 export const firebaseConfig = {
-  apiKey: "AIzaSyD-parkwise-studio-key-replace-in-console", // Replace with your actual API key from Firebase Console
-  authDomain: "parkwise-studio.firebaseapp.com",
-  projectId: "parkwise-studio",
-  storageBucket: "parkwise-studio.appspot.com",
+  apiKey: "AIzaSyANhdC-URktoNO5D9x36xccpG7F4TzzaJg",
+  authDomain: "studio-342360606-7ee64.firebaseapp.com",
+  projectId: "studio-342360606-7ee64",
+  storageBucket: "studio-342360606-7ee64.firebasestorage.app",
   messagingSenderId: "315174975134",
   appId: "1:315174975134:web:0208a0f95ade6b7d64ed8f"
 };
