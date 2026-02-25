@@ -1,0 +1,89 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Information about a user, including their role (owner, guard, customer).",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["owner", "guard", "customer"] },
+        "phone": { "type": "string" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "ParkingLand": {
+      "title": "Parking Land",
+      "description": "A parking property owned by a user.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "name": { "type": "string" },
+        "location": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" }
+          }
+        },
+        "totalSlots": { "type": "number" },
+        "pricePerHour": { "type": "number" },
+        "image": { "type": "string" }
+      },
+      "required": ["ownerId", "name", "totalSlots", "pricePerHour"]
+    },
+    "ParkingSlot": {
+      "title": "Parking Slot",
+      "description": "An individual parking slot within a land.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "landId": { "type": "string" },
+        "slotNumber": { "type": "string" },
+        "status": { "type": "string", "enum": ["available", "booked", "occupied"] },
+        "currentVehicle": { "type": "string" },
+        "bookedBy": { "type": "string" }
+      },
+      "required": ["landId", "slotNumber", "status"]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "A reservation made by a customer.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "slotId": { "type": "string" },
+        "landId": { "type": "string" },
+        "startTime": { "type": "string", "format": "date-time" },
+        "endTime": { "type": "string", "format": "date-time" },
+        "amount": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "confirmed", "completed", "cancelled"] }
+      },
+      "required": ["userId", "slotId", "landId", "startTime", "endTime", "amount", "status"]
+    }
+  },
+  "auth": {
+    "providers": ["google.com", "password"]
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profile documents."
+    },
+    "/parkingLands/{landId}": {
+      "schema": { "$ref": "#/entities/ParkingLand" },
+      "description": "Parking land documents."
+    },
+    "/parkingLands/{landId}/slots/{slotId}": {
+      "schema": { "$ref": "#/entities/ParkingSlot" },
+      "description": "Slot sub-collection for each land."
+    },
+    "/bookings/{bookingId}": {
+      "schema": { "$ref": "#/entities/Booking" },
+      "description": "Customer booking records."
+    }
+  }
+}
