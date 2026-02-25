@@ -12,6 +12,7 @@ import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 
 import { useAuth, useFirestore } from "@/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
+import Link from "next/link";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -38,7 +39,7 @@ export default function LoginPage() {
         toast({
           variant: "destructive",
           title: "Profile not found",
-          description: "Please contact support to assign your role.",
+          description: "Please sign up to create your profile.",
         });
       }
     } catch (error: any) {
@@ -61,14 +62,15 @@ export default function LoginPage() {
       const userDoc = await getDoc(doc(db, "users", result.user.uid));
 
       if (!userDoc.exists()) {
-        // Default new users to customer
-        await setDoc(doc(db, "users", result.user.uid), {
+        // Default new users to customer if they don't exist
+        const userData = {
           uid: result.user.uid,
           email: result.user.email,
           displayName: result.user.displayName || "User",
           role: "customer",
           createdAt: new Date().toISOString()
-        });
+        };
+        await setDoc(doc(db, "users", result.user.uid), userData);
         router.push("/dashboard/customer");
       } else {
         router.push(`/dashboard/${userDoc.data().role}`);
@@ -167,7 +169,7 @@ export default function LoginPage() {
         </CardContent>
         <CardFooter className="text-center">
           <p className="text-sm text-muted-foreground w-full">
-            Don't have an account? <Button variant="link" className="p-0 h-auto">Sign up</Button>
+            Don't have an account? <Link href="/signup" className="text-primary font-bold hover:underline">Sign up</Link>
           </p>
         </CardFooter>
       </Card>

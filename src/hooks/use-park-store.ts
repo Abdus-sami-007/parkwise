@@ -2,27 +2,23 @@
 "use client";
 
 import { create } from 'zustand';
-import { UserProfile, ParkingLand, ParkingSlot, Booking, UserRole } from '@/lib/types';
-import { MOCK_USERS, MOCK_LANDS, generateMockSlots } from '@/lib/mock-data';
+import { UserProfile, ParkingLand, ParkingSlot, Booking } from '@/lib/types';
+import { MOCK_LANDS, generateMockSlots } from '@/lib/mock-data';
 
 interface ParkState {
-  currentUser: UserProfile | null;
   lands: ParkingLand[];
-  slots: Record<string, ParkingSlot[]>; // landId -> slots
+  slots: Record<string, ParkingSlot[]>;
   bookings: Booking[];
   loading: boolean;
   
-  // Auth
-  login: (role: UserRole) => void;
-  logout: () => void;
-  
-  // Mutations
+  // Mutations (For prototype simulation)
   updateSlotStatus: (landId: string, slotId: string, status: ParkingSlot['status'], vehicle?: string) => void;
   createBooking: (booking: Omit<Booking, 'id'>) => void;
+  setLands: (lands: ParkingLand[]) => void;
+  setBookings: (bookings: Booking[]) => void;
 }
 
 export const useParkStore = create<ParkState>((set) => ({
-  currentUser: null,
   lands: MOCK_LANDS,
   slots: {
     'land1': generateMockSlots('land1', 50),
@@ -31,17 +27,13 @@ export const useParkStore = create<ParkState>((set) => ({
   bookings: [],
   loading: false,
 
-  login: (role) => {
-    const user = MOCK_USERS.find(u => u.role === role) || null;
-    set({ currentUser: user });
-  },
-
-  logout: () => set({ currentUser: null }),
+  setLands: (lands) => set({ lands }),
+  setBookings: (bookings) => set({ bookings }),
 
   updateSlotStatus: (landId, slotId, status, vehicle) => set((state) => ({
     slots: {
       ...state.slots,
-      [landId]: state.slots[landId].map(slot => 
+      [landId]: (state.slots[landId] || []).map(slot => 
         slot.id === slotId ? { ...slot, status, currentVehicle: vehicle } : slot
       )
     }
@@ -51,10 +43,11 @@ export const useParkStore = create<ParkState>((set) => ({
     const newBooking: Booking = { ...bookingData, id: `booking-${Date.now()}` };
     const updatedSlots = { ...state.slots };
     
-    // Update slot status to booked if booking confirmed
-    updatedSlots[bookingData.landId] = updatedSlots[bookingData.landId].map(slot =>
-      slot.id === bookingData.slotId ? { ...slot, status: 'booked', bookedBy: bookingData.userId } : slot
-    );
+    if (updatedSlots[bookingData.landId]) {
+      updatedSlots[bookingData.landId] = updatedSlots[bookingData.landId].map(slot =>
+        slot.id === bookingData.slotId ? { ...slot, status: 'booked', bookedBy: bookingData.userId } : slot
+      );
+    }
 
     return {
       bookings: [...state.bookings, newBooking],
