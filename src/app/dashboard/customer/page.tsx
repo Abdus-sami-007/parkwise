@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useParkStore } from "@/hooks/use-park-store";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MapPin, Search, Calendar, CreditCard, CheckCircle2, Info, Map as MapIcon, Grid } from "lucide-react";
+import { MapPin, Search, Calendar, CreditCard, Info, Map as MapIcon, Grid, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import Image from "next/image";
 import { ParkingLand, ParkingSlot } from "@/lib/types";

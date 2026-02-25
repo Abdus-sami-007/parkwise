@@ -8,6 +8,7 @@ import { MapPin, ShieldCheck, LayoutDashboard, ParkingCircle, ArrowRight, Star, 
 import Image from "next/image";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useUser } from "@/firebase";
+import { cn } from "@/lib/utils";
 
 export default function Home() {
   const router = useRouter();
@@ -98,33 +99,6 @@ export default function Home() {
           </Card>
         </div>
 
-        {/* Visual Hero */}
-        <div className="relative w-full aspect-[21/9] rounded-[40px] overflow-hidden shadow-2xl group">
-          <Image 
-            src="https://picsum.photos/seed/park1/1200/600" 
-            alt="Hero Parking" 
-            fill 
-            className="object-cover transition-transform duration-700 group-hover:scale-105"
-            priority
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-12">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="flex -space-x-3">
-                {[1,2,3,4].map(i => (
-                  <div key={i} className="w-10 h-10 rounded-full border-4 border-black/20 bg-muted overflow-hidden">
-                    <Image src={`https://api.dicebear.com/7.x/avataaars/svg?seed=user${i}`} alt="user" width={40} height={40} />
-                  </div>
-                ))}
-              </div>
-              <p className="text-white/80 text-sm font-medium ml-4">Join 2M+ users worldwide</p>
-            </div>
-            <h3 className="text-white text-4xl font-bold max-w-2xl leading-tight font-headline">
-              "ParkWise cut my daily commute search time by 15 minutes. It's a game changer for downtown life."
-            </h3>
-            <p className="text-primary mt-4 font-bold text-lg">— Sarah J., Daily Commuter</p>
-          </div>
-        </div>
-
         {/* Feature Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 w-full border-t pt-24">
           {[
@@ -159,14 +133,6 @@ export default function Home() {
               <li className="hover:text-primary cursor-pointer transition-colors">Find Parking</li>
               <li className="hover:text-primary cursor-pointer transition-colors">List your Land</li>
               <li className="hover:text-primary cursor-pointer transition-colors">Guard Portal</li>
-            </ul>
-          </div>
-          <div className="space-y-4">
-            <h5 className="font-bold uppercase tracking-widest text-sm text-primary">Legal</h5>
-            <ul className="space-y-2 text-muted-foreground">
-              <li className="hover:text-primary cursor-pointer transition-colors">Privacy Policy</li>
-              <li className="hover:text-primary cursor-pointer transition-colors">Terms of Service</li>
-              <li className="hover:text-primary cursor-pointer transition-colors">Cookie Policy</li>
             </ul>
           </div>
         </div>
