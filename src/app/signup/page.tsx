@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -8,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ParkingCircle, Mail, Lock, User, Loader2, Phone } from "lucide-react";
+import { ParkingCircle, Mail, Lock, User, Loader2, Phone, ArrowRight } from "lucide-react";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { useAuth, useFirestore } from "@/firebase";
 import { doc, setDoc } from "firebase/firestore";
@@ -52,7 +51,7 @@ export default function SignupPage() {
 
       toast({
         title: "Account created!",
-        description: `Welcome to ParkWise, ${name}.`,
+        description: `Welcome to ParkWise, ${name}. Your role is ${role}.`,
       });
 
       router.push(`/dashboard/${role}`);
@@ -69,20 +68,34 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md shadow-xl">
+      <Card className="w-full max-w-md shadow-xl border-none">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
-            <div className="bg-primary p-3 rounded-2xl">
+            <div className="bg-primary p-3 rounded-2xl shadow-lg shadow-primary/20">
               <ParkingCircle className="h-8 w-8 text-white" />
             </div>
           </div>
           <CardTitle className="text-3xl font-bold font-headline">Create account</CardTitle>
           <CardDescription>
-            Join ParkWise today and start parking smarter
+            Choose your role and join the smart parking network
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent>
           <form onSubmit={handleSignup} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="role">I am a...</Label>
+              <Select value={role} onValueChange={setRole}>
+                <SelectTrigger className="h-11">
+                  <SelectValue placeholder="Select your role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="customer">Customer (Finding Parking)</SelectItem>
+                  <SelectItem value="owner">Property Owner (Listing Land)</SelectItem>
+                  <SelectItem value="guard">Security Guard (Live Patrol)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
               <div className="relative">
@@ -90,13 +103,14 @@ export default function SignupPage() {
                 <Input 
                   id="name" 
                   placeholder="John Doe" 
-                  className="pl-10"
+                  className="pl-10 h-11"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required 
                 />
               </div>
             </div>
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <div className="relative">
@@ -105,39 +119,29 @@ export default function SignupPage() {
                   id="email" 
                   type="email" 
                   placeholder="name@example.com" 
-                  className="pl-10"
+                  className="pl-10 h-11"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required 
                 />
               </div>
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone (Optional)</Label>
+              <Label htmlFor="phone">Phone Number</Label>
               <div className="relative">
                 <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input 
                   id="phone" 
                   placeholder="+91 98765 43210" 
-                  className="pl-10"
+                  className="pl-10 h-11"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
+                  required
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="role">I am a...</Label>
-              <Select value={role} onValueChange={setRole}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select your role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="customer">Customer (Finding Parking)</SelectItem>
-                  <SelectItem value="owner">Property Owner</SelectItem>
-                  <SelectItem value="guard">Security Guard</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <div className="relative">
@@ -145,21 +149,23 @@ export default function SignupPage() {
                 <Input 
                   id="password" 
                   type="password" 
-                  className="pl-10"
+                  placeholder="••••••••"
+                  className="pl-10 h-11"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required 
                 />
               </div>
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? <Loader2 className="animate-spin h-4 w-4" /> : "Sign Up"}
+
+            <Button type="submit" className="w-full h-11 text-lg font-bold mt-4 gap-2" disabled={loading}>
+              {loading ? <Loader2 className="animate-spin h-5 w-5" /> : <>Complete Sign Up <ArrowRight className="h-5 w-5" /></>}
             </Button>
           </form>
         </CardContent>
         <CardFooter className="text-center">
           <p className="text-sm text-muted-foreground w-full">
-            Already have an account? <Link href="/login" className="text-primary font-bold hover:underline">Sign in</Link>
+            Already using ParkWise? <Link href="/login" className="text-primary font-bold hover:underline">Sign in</Link>
           </p>
         </CardFooter>
       </Card>
