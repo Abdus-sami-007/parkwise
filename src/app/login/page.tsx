@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -7,17 +6,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ParkingCircle, Mail, Lock, Loader2 } from "lucide-react";
+import { ParkingCircle, Mail, Lock, Loader2, AlertCircle } from "lucide-react";
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { useAuth, useFirestore } from "@/firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const auth = useAuth();
   const db = useFirestore();
   const router = useRouter();
@@ -28,6 +29,7 @@ export default function LoginPage() {
     if (!auth || !db) return;
 
     setLoading(true);
+    setErrorMessage(null);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
@@ -36,18 +38,14 @@ export default function LoginPage() {
         const userData = userDoc.data();
         router.push(`/dashboard/${userData.role}`);
       } else {
-        toast({
-          variant: "destructive",
-          title: "Profile missing",
-          description: "No role assigned to this account. Please sign up again.",
-        });
+        setErrorMessage("Profile missing. No role assigned to this account.");
       }
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Login failed",
-        description: error.message,
-      });
+      console.error("Login error:", error);
+      const message = error.code === 'auth/network-request-failed' 
+        ? "Network error. Please check your connection or authorized domains." 
+        : error.message;
+      setErrorMessage(message);
     } finally {
       setLoading(false);
     }
@@ -56,30 +54,21 @@ export default function LoginPage() {
   const loginWithGoogle = async () => {
     if (!auth || !db) return;
     setLoading(true);
+    setErrorMessage(null);
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       const userDoc = await getDoc(doc(db, "users", result.user.uid));
 
       if (!userDoc.exists()) {
-        const userData = {
-          uid: result.user.uid,
-          email: result.user.email,
-          displayName: result.user.displayName || "New User",
-          role: "customer",
-          createdAt: new Date().toISOString()
-        };
-        await setDoc(doc(db, "users", result.user.uid), userData);
-        router.push("/dashboard/customer");
+        // Default new Google users to customers
+        router.push("/signup?role=customer"); 
       } else {
         router.push(`/dashboard/${userDoc.data().role}`);
       }
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Google login failed",
-        description: error.message,
-      });
+      console.error("Google login error:", error);
+      setErrorMessage(error.message);
     } finally {
       setLoading(false);
     }
@@ -100,6 +89,12 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {errorMessage && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{errorMessage}</AlertDescription>
+            </Alert>
+          )}
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>

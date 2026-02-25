@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -8,12 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ParkingCircle, Mail, Lock, User, Loader2, Phone, ArrowRight } from "lucide-react";
+import { ParkingCircle, Mail, Lock, User, Loader2, Phone, ArrowRight, AlertCircle } from "lucide-react";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { useAuth, useFirestore } from "@/firebase";
 import { doc, setDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function SignupPage() {
   const [name, setName] = useState("");
@@ -22,6 +22,7 @@ export default function SignupPage() {
   const [phone, setPhone] = useState("");
   const [role, setRole] = useState<string>("customer");
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   const auth = useAuth();
   const db = useFirestore();
@@ -33,6 +34,7 @@ export default function SignupPage() {
     if (!auth || !db) return;
 
     setLoading(true);
+    setErrorMessage(null);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
@@ -57,11 +59,11 @@ export default function SignupPage() {
 
       router.push(`/dashboard/${role}`);
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Signup failed",
-        description: error.message,
-      });
+      console.error("Signup error:", error);
+      const message = error.code === 'auth/network-request-failed' 
+        ? "Network error. Firebase might be blocked or domain not authorized." 
+        : error.message;
+      setErrorMessage(message);
     } finally {
       setLoading(false);
     }
@@ -83,6 +85,12 @@ export default function SignupPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSignup} className="space-y-4">
+            {errorMessage && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{errorMessage}</AlertDescription>
+              </Alert>
+            )}
             <div className="space-y-2">
               <Label htmlFor="role">I am a...</Label>
               <Select value={role} onValueChange={setRole}>

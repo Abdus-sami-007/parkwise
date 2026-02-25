@@ -25,9 +25,10 @@ export default function DashboardLayout({
   const initSync = useParkStore(state => state.initSync);
 
   useEffect(() => {
-    // Initialize real-time data sync once
-    initSync();
-  }, [initSync]);
+    if (db) {
+      initSync(db);
+    }
+  }, [initSync, db]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -37,16 +38,19 @@ export default function DashboardLayout({
 
     const checkRole = async () => {
       if (user && db) {
-        const userDoc = await getDoc(doc(db, "users", user.uid));
-        if (userDoc.exists()) {
-          const role = userDoc.data().role;
-          // Ensure user is on their correct dashboard
-          if (!pathname.includes(`/dashboard/${role}`)) {
-             // Optional: Force redirect if they try to access another role's dashboard
-             // router.push(`/dashboard/${role}`);
+        try {
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          if (userDoc.exists()) {
+            const role = userDoc.data().role;
+            if (!pathname.includes(`/dashboard/${role}`)) {
+               // Optional redirect
+            }
           }
+        } catch (e) {
+          console.error("Error checking role:", e);
+        } finally {
+          setRoleLoading(false);
         }
-        setRoleLoading(false);
       }
     };
 

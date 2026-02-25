@@ -8,13 +8,9 @@ import {
   doc, 
   updateDoc, 
   addDoc, 
-  query, 
-  where,
-  getFirestore,
-  setDoc,
-  serverTimestamp
+  serverTimestamp,
+  Firestore
 } from 'firebase/firestore';
-import { initializeFirebase } from '@/firebase';
 
 interface ParkState {
   lands: ParkingLand[];
@@ -23,11 +19,11 @@ interface ParkState {
   loading: boolean;
   
   // Real-time Sync
-  initSync: () => void;
+  initSync: (db: Firestore) => void;
   
   // Mutations
-  updateSlotStatus: (landId: string, slotId: string, status: ParkingSlot['status'], vehicle?: string) => Promise<void>;
-  createBooking: (booking: Omit<Booking, 'id'>) => Promise<void>;
+  updateSlotStatus: (db: Firestore, landId: string, slotId: string, status: ParkingSlot['status'], vehicle?: string) => Promise<void>;
+  createBooking: (db: Firestore, booking: Omit<Booking, 'id'>) => Promise<void>;
 }
 
 export const useParkStore = create<ParkState>((set, get) => ({
@@ -36,9 +32,7 @@ export const useParkStore = create<ParkState>((set, get) => ({
   bookings: [],
   loading: true,
 
-  initSync: () => {
-    const { db } = initializeFirebase();
-    
+  initSync: (db) => {
     // Sync Lands
     const landsQuery = collection(db, 'parkingLands');
     onSnapshot(landsQuery, (snapshot) => {
@@ -57,7 +51,7 @@ export const useParkStore = create<ParkState>((set, get) => ({
       });
     });
 
-    // Sync Bookings (global for simplicity in prototype)
+    // Sync Bookings
     const bookingsQuery = collection(db, 'bookings');
     onSnapshot(bookingsQuery, (snapshot) => {
       const bookings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Booking));
@@ -65,10 +59,8 @@ export const useParkStore = create<ParkState>((set, get) => ({
     });
   },
 
-  updateSlotStatus: async (landId, slotId, status, vehicle) => {
-    const { db } = initializeFirebase();
+  updateSlotStatus: async (db, landId, slotId, status, vehicle) => {
     const slotRef = doc(db, 'parkingLands', landId, 'slots', slotId);
-    
     await updateDoc(slotRef, {
       status,
       currentVehicle: vehicle || null,
@@ -76,16 +68,12 @@ export const useParkStore = create<ParkState>((set, get) => ({
     });
   },
 
-  createBooking: async (bookingData) => {
-    const { db } = initializeFirebase();
-    
-    // 1. Create Booking Record
+  createBooking: async (db, bookingData) => {
     const bookingRef = await addDoc(collection(db, 'bookings'), {
       ...bookingData,
       createdAt: serverTimestamp()
     });
 
-    // 2. Update Slot Status
     const slotRef = doc(db, 'parkingLands', bookingData.landId, 'slots', bookingData.slotId);
     await updateDoc(slotRef, {
       status: 'booked',
