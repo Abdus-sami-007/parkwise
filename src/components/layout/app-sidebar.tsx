@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useParkStore } from "@/hooks/use-park-store";
+import { useUser } from "@/firebase";
 import {
   Sidebar,
   SidebarContent,
@@ -28,13 +28,18 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { NavUser } from "./nav-user";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export function AppSidebar() {
-  const { currentUser } = useParkStore();
+  const { user } = useUser();
   const pathname = usePathname();
 
+  // In a real app, role would be a custom claim or fetched from Firestore
+  // For this demo, we can infer from path or assume customer
+  const role = pathname.includes('/owner') ? 'owner' : pathname.includes('/guard') ? 'guard' : 'customer';
+
   const getMenuItems = () => {
-    switch (currentUser?.role) {
+    switch (role) {
       case 'owner':
         return [
           { title: "Overview", icon: LayoutDashboard, url: "/dashboard/owner" },
@@ -66,17 +71,20 @@ export function AppSidebar() {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
-              <Link href="/">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                  <ParkingCircle className="size-4" />
-                </div>
-                <div className="flex flex-col gap-0.5 leading-none">
-                  <span className="font-semibold font-headline">ParkWise</span>
-                  <span className="text-xs text-muted-foreground">Smart Systems</span>
-                </div>
-              </Link>
-            </SidebarMenuButton>
+            <div className="flex items-center justify-between p-2">
+              <SidebarMenuButton size="lg" asChild>
+                <Link href="/">
+                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                    <ParkingCircle className="size-4" />
+                  </div>
+                  <div className="flex flex-col gap-0.5 leading-none">
+                    <span className="font-semibold font-headline">ParkWise</span>
+                    <span className="text-xs text-muted-foreground">Smart Systems</span>
+                  </div>
+                </Link>
+              </SidebarMenuButton>
+              <ThemeToggle />
+            </div>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
