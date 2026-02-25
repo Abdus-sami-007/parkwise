@@ -1,0 +1,23 @@
+
+{
+  "placeholderImages": [
+    {
+      "id": "parking-hero",
+      "description": "Smart parking lot overhead view",
+      "imageUrl": "https://picsum.photos/seed/parking1/1200/800",
+      "imageHint": "parking lot"
+    },
+    {
+      "id": "parking-land-1",
+      "description": "Hyderabad Central Mall Parking",
+      "imageUrl": "https://picsum.photos/seed/mall/600/400",
+      "imageHint": "city mall"
+    },
+    {
+      "id": "parking-land-2",
+      "description": "Hitech City Corporate Parking",
+      "imageUrl": "https://picsum.photos/seed/office/600/400",
+      "imageHint": "office building"
+    }
+  ]
+}
