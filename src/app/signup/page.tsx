@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ParkingCircle, Loader2, ArrowRight, AlertCircle } from "lucide-react";
+import { ParkingCircle, Loader2, ArrowRight, AlertCircle, Home } from "lucide-react";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { useAuth, useFirestore } from "@/firebase";
 import { doc, setDoc } from "firebase/firestore";
@@ -45,7 +45,6 @@ export default function SignupPage() {
       const user = userCredential.user;
 
       setStatus("Syncing profile...");
-      // We await updateProfile because it's an Auth service call, but it's usually fast.
       await updateProfile(user, { displayName: name });
 
       const userDocRef = doc(db, "users", user.uid);
@@ -58,8 +57,6 @@ export default function SignupPage() {
         createdAt: new Date().toISOString()
       };
 
-      // CRITICAL: Do NOT await setDoc here. Proceed to dashboard immediately.
-      // Firebase will sync this in the background using long-polling.
       setDoc(userDocRef, userData).catch(async (error) => {
         const permissionError = new FirestorePermissionError({
           path: userDocRef.path,
@@ -74,7 +71,6 @@ export default function SignupPage() {
         description: "Your account is being ready.",
       });
 
-      // Redirect immediately
       router.replace(`/dashboard/${role}`);
 
     } catch (error: any) {
@@ -93,7 +89,15 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 space-y-4">
+      <div className="w-full max-w-md flex justify-start">
+        <Button variant="ghost" asChild className="gap-2 -ml-2">
+          <Link href="/">
+            <Home className="h-4 w-4" /> Back to Home
+          </Link>
+        </Button>
+      </div>
+
       <Card className="w-full max-w-md shadow-2xl border-none">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">

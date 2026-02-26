@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ParkingCircle, Mail, Lock, Loader2, AlertCircle } from "lucide-react";
+import { ParkingCircle, Mail, Lock, Loader2, AlertCircle, Home } from "lucide-react";
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { useAuth, useFirestore } from "@/firebase";
 import { doc, getDoc } from "firebase/firestore";
@@ -84,7 +84,15 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 space-y-4">
+      <div className="w-full max-w-md flex justify-start">
+        <Button variant="ghost" asChild className="gap-2 -ml-2">
+          <Link href="/">
+            <Home className="h-4 w-4" /> Back to Home
+          </Link>
+        </Button>
+      </div>
+      
       <Card className="w-full max-w-md shadow-2xl border-none">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
