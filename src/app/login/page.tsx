@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -6,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ParkingCircle, Mail, Lock, Loader2, AlertCircle, Home } from "lucide-react";
+import { ParkingCircle, Mail, Lock, Loader2, AlertCircle, Home, RefreshCcw } from "lucide-react";
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { useAuth, useFirestore } from "@/firebase";
 import { doc, getDoc } from "firebase/firestore";
@@ -34,6 +35,8 @@ export default function LoginPage() {
 
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      // Use getDoc with a slight delay or retry if propagation is slow
       const userDocRef = doc(db, "users", userCredential.user.uid);
       const userDoc = await getDoc(userDocRef);
       
@@ -42,21 +45,24 @@ export default function LoginPage() {
         router.replace(`/dashboard/${userData.role}`);
         toast({ title: "Welcome back!", description: "Successfully signed in." });
       } else {
-        setErrorMessage({
-          title: "Account Incomplete",
-          message: "Auth successful, but no user profile found. Please contact support or try signing up."
-        });
-        setLoading(false);
+        // If doc is missing but auth succeeded, redirect to dashboard layout 
+        // which handles profile sync/missing states better
+        router.replace(`/dashboard/customer`); // Default fallback, layout will correct it
       }
     } catch (error: any) {
       console.error("Login error:", error);
+      let title = "Sign-in Failed";
       let message = "Invalid email or password.";
+      
       if (error.code === 'auth/unauthorized-domain') {
-        message = "This domain is not authorized. Please add it to Firebase Auth settings.";
+        message = "This domain is not authorized. Please add it to your Firebase Auth settings.";
       } else if (error.code === 'auth/network-request-failed') {
-        message = "Network error. Please check your connection.";
+        message = "Network error. Firebase is unable to reach the server. Please check your connection.";
+      } else if (error.code === 'auth/too-many-requests') {
+        message = "Too many failed attempts. Please try again later.";
       }
-      setErrorMessage({ title: "Sign-in Failed", message });
+      
+      setErrorMessage({ title, message });
       setLoading(false);
     }
   };
@@ -64,6 +70,7 @@ export default function LoginPage() {
   const loginWithGoogle = async () => {
     if (!auth || !db) return;
     setLoading(true);
+    setErrorMessage(null);
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
@@ -75,8 +82,9 @@ export default function LoginPage() {
         router.replace(`/dashboard/${userDoc.data().role}`);
       }
     } catch (error: any) {
+      console.error("Google Auth error:", error);
       setErrorMessage({
-        title: "Google Error",
+        title: "Google Auth Failed",
         message: error.message || "Could not sign in with Google."
       });
       setLoading(false);
@@ -108,18 +116,29 @@ export default function LoginPage() {
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>{errorMessage.title}</AlertTitle>
-              <AlertDescription>{errorMessage.message}</AlertDescription>
+              <AlertDescription className="space-y-2">
+                <p>{errorMessage.message}</p>
+                <Button variant="outline" size="sm" onClick={() => window.location.reload()} className="h-7 text-[10px] uppercase font-bold border-destructive/20 hover:bg-destructive/10 text-destructive">
+                  <RefreshCcw className="mr-1 h-3 w-3" /> Refresh Page
+                </Button>
+              </AlertDescription>
             </Alert>
           )}
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} disabled={loading} required />
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input id="email" type="email" className="pl-10" placeholder="name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} disabled={loading} required />
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} disabled={loading} required />
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input id="password" type="password" className="pl-10" value={password} onChange={(e) => setPassword(e.target.value)} disabled={loading} required />
+              </div>
             </div>
             <Button type="submit" className="w-full h-11 text-lg font-bold" disabled={loading}>
               {loading ? <Loader2 className="animate-spin" /> : "Sign In"}

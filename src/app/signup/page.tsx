@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -44,7 +45,7 @@ export default function SignupPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      setStatus("Syncing profile...");
+      setStatus("Updating profile name...");
       await updateProfile(user, { displayName: name });
 
       const userDocRef = doc(db, "users", user.uid);
@@ -57,32 +58,33 @@ export default function SignupPage() {
         createdAt: new Date().toISOString()
       };
 
-      setDoc(userDocRef, userData).catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
-          path: userDocRef.path,
-          operation: 'create',
-          requestResourceData: userData,
-        });
-        errorEmitter.emit('permission-error', permissionError);
-      });
+      setStatus("Syncing with profile server...");
+      
+      // We use await here to ensure the doc is at least queued for the write
+      // before navigating, which is safer for cloud workstations.
+      await setDoc(userDocRef, userData);
 
       toast({
-        title: "Welcome!",
-        description: "Your account is being ready.",
+        title: "Account Created!",
+        description: `Welcome to ParkWise, ${name}.`,
       });
 
       router.replace(`/dashboard/${role}`);
 
     } catch (error: any) {
       console.error("Signup error:", error);
+      let title = "Registration Failed";
       let message = error.message || "Please check your internet connection.";
+      
       if (error.code === 'auth/email-already-in-use') {
-        message = "This email is already registered.";
+        message = "This email is already registered. Please sign in instead.";
+      } else if (error.code === 'auth/network-request-failed') {
+        message = "Network error. Please ensure you are online and authorized.";
+      } else if (error.code === 'permission-denied') {
+        message = "Database access denied. Please contact support.";
       }
-      setErrorMessage({
-        title: "Registration Failed",
-        message: message
-      });
+      
+      setErrorMessage({ title, message });
       setLoading(false);
       setStatus(null);
     }
@@ -127,7 +129,7 @@ export default function SignupPage() {
             
             <div className="space-y-2">
               <Label htmlFor="role">User Role</Label>
-              <Select value={role} onValueChange={setRole}>
+              <Select value={role} onValueChange={setRole} disabled={loading}>
                 <SelectTrigger className="h-11">
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
