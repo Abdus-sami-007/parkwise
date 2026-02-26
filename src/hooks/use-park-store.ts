@@ -1,7 +1,8 @@
+
 "use client";
 
 import { create } from 'zustand';
-import { ParkingLand, ParkingSlot, Booking } from '@/lib/types';
+import { ParkingLand, ParkingSlot, Booking, UserProfile } from '@/lib/types';
 import { 
   collection, 
   onSnapshot, 
@@ -11,13 +12,15 @@ import {
   serverTimestamp,
   Firestore,
   query,
-  limit
+  limit,
+  where
 } from 'firebase/firestore';
 
 interface ParkState {
   lands: ParkingLand[];
   slots: Record<string, ParkingSlot[]>;
   bookings: Booking[];
+  availableGuards: UserProfile[];
   loading: boolean;
   isInitialized: boolean;
   
@@ -33,6 +36,7 @@ export const useParkStore = create<ParkState>((set, get) => ({
   lands: [],
   slots: {},
   bookings: [],
+  availableGuards: [],
   loading: true,
   isInitialized: false,
 
@@ -62,6 +66,13 @@ export const useParkStore = create<ParkState>((set, get) => ({
     onSnapshot(bookingsQuery, (snapshot) => {
       const bookings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Booking));
       set({ bookings });
+    });
+
+    // Sync Available Guards (All users with role 'guard')
+    const guardsQuery = query(collection(db, 'users'), where('role', '==', 'guard'), limit(50));
+    onSnapshot(guardsQuery, (snapshot) => {
+      const guards = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
+      set({ availableGuards: guards });
     });
   },
 
