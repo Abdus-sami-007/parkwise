@@ -22,6 +22,7 @@ export default function SignupPage() {
   const [phone, setPhone] = useState("");
   const [role, setRole] = useState<string>("customer");
   const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<{title: string, message: string} | null>(null);
   
   const auth = useAuth();
@@ -35,14 +36,15 @@ export default function SignupPage() {
 
     setLoading(true);
     setErrorMessage(null);
+    setStatus("Creating account...");
+
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Update Firebase Auth profile
+      setStatus("Syncing with profile server...");
       await updateProfile(user, { displayName: name });
 
-      // Create profile document in Firestore
       const userDocRef = doc(db, "users", user.uid);
       await setDoc(userDocRef, {
         uid: user.uid,
@@ -54,32 +56,21 @@ export default function SignupPage() {
       });
 
       toast({
-        title: "Account Created!",
-        description: "Welcome to ParkWise. Getting things ready...",
+        title: "Welcome!",
+        description: "Account created successfully.",
       });
 
-      // Navigate to correct dashboard
       router.replace(`/dashboard/${role}`);
 
     } catch (error: any) {
       console.error("Signup error:", error);
-      let title = "Signup Failed";
-      let message = "We couldn't create your account.";
-      
-      if (error.code === 'auth/email-already-in-use') {
-        message = "This email is already registered.";
-      } else if (error.code === 'auth/weak-password') {
-        message = "Password must be at least 6 characters.";
-      } else if (error.code === 'auth/network-request-failed' || error.message?.includes('offline')) {
-        title = "Connection Timeout";
-        message = "The request is taking too long. Please ensure your Firebase settings allow this domain.";
-      } else {
-        message = error.message || "An unexpected error occurred.";
-      }
-      
-      setErrorMessage({ title, message });
+      setErrorMessage({
+        title: "Registration Failed",
+        message: error.message || "Please check your internet connection and try again."
+      });
     } finally {
       setLoading(false);
+      setStatus(null);
     }
   };
 
@@ -93,9 +84,7 @@ export default function SignupPage() {
             </div>
           </div>
           <CardTitle className="text-3xl font-bold font-headline">Join ParkWise</CardTitle>
-          <CardDescription>
-            Create an account to start managing your parking
-          </CardDescription>
+          <CardDescription>Select your role and get started</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSignup} className="space-y-4">
@@ -106,95 +95,56 @@ export default function SignupPage() {
                 <AlertDescription>{errorMessage.message}</AlertDescription>
               </Alert>
             )}
+
+            {status && (
+              <div className="flex items-center gap-3 p-3 bg-primary/5 rounded-lg text-sm text-primary animate-pulse">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                {status}
+              </div>
+            )}
             
             <div className="space-y-2">
               <Label htmlFor="role">User Role</Label>
               <Select value={role} onValueChange={setRole}>
                 <SelectTrigger className="h-11">
-                  <SelectValue placeholder="Select your role" />
+                  <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="customer">Driver (Book Parking)</SelectItem>
-                  <SelectItem value="owner">Land Owner (List Property)</SelectItem>
-                  <SelectItem value="guard">Security (Manage Patrols)</SelectItem>
+                  <SelectItem value="customer">Driver (Customer)</SelectItem>
+                  <SelectItem value="owner">Property Owner</SelectItem>
+                  <SelectItem value="guard">Security Guard</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
-              <div className="relative">
-                <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  id="name" 
-                  placeholder="John Doe" 
-                  className="pl-10 h-11"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  disabled={loading}
-                  required 
-                />
-              </div>
+              <Input id="name" placeholder="John Doe" value={name} onChange={(e) => setName(e.target.value)} disabled={loading} required />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  id="email" 
-                  type="email" 
-                  placeholder="name@example.com" 
-                  className="pl-10 h-11"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={loading}
-                  required 
-                />
-              </div>
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" type="email" placeholder="name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} disabled={loading} required />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number</Label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  id="phone" 
-                  placeholder="+91 XXXXX XXXXX" 
-                  className="pl-10 h-11"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  disabled={loading}
-                  required
-                />
-              </div>
+              <Label htmlFor="phone">Phone</Label>
+              <Input id="phone" placeholder="+91 XXXXX XXXXX" value={phone} onChange={(e) => setPhone(e.target.value)} disabled={loading} required />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  id="password" 
-                  type="password" 
-                  placeholder="••••••••"
-                  className="pl-10 h-11"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={loading}
-                  required 
-                />
-              </div>
+              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} disabled={loading} required />
             </div>
 
-            <Button type="submit" className="w-full h-11 text-lg font-bold mt-4 gap-2" disabled={loading}>
-              {loading ? <Loader2 className="animate-spin h-5 w-5" /> : <>Create Account <ArrowRight className="h-5 w-5" /></>}
+            <Button type="submit" className="w-full h-11 text-lg font-bold mt-4" disabled={loading}>
+              {loading ? <Loader2 className="animate-spin" /> : <>Create Account <ArrowRight className="ml-2 h-5 w-5" /></>}
             </Button>
           </form>
         </CardContent>
         <CardFooter className="text-center">
           <p className="text-sm text-muted-foreground w-full">
-            Already have an account? <Link href="/login" className="text-primary font-bold hover:underline">Sign in</Link>
+            Already registered? <Link href="/login" className="text-primary font-bold hover:underline">Sign in</Link>
           </p>
         </CardFooter>
       </Card>

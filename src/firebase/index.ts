@@ -1,13 +1,14 @@
 'use client';
 
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getFirestore, Firestore, initializeFirestore, CACHE_SIZE_UNLIMITED } from 'firebase/firestore';
+import { getFirestore, Firestore, initializeFirestore, memoryLocalCache } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { firebaseConfig } from './config';
 
 /**
  * Initializes Firebase with specific optimizations for Cloud Workstation environments.
- * Forces long polling for Firestore to avoid WebSocket connectivity issues.
+ * 1. Forces long polling to avoid WebSocket proxy issues.
+ * 2. Uses memory-only cache to prevent disk-lock issues in the development environment.
  */
 export function initializeFirebase() {
   const apps = getApps();
@@ -21,13 +22,10 @@ export function initializeFirebase() {
 
   let db: Firestore;
   try {
-    // Attempt to initialize Firestore with forced long-polling
-    // We use a high-reliability configuration for proxy environments
+    // We use initializeFirestore to configure specific settings for stability
     db = initializeFirestore(app, {
-      experimentalForceLongPolling: true,
-      localCache: {
-        kind: 'persistent',
-      }
+      experimentalForceLongPolling: true, // Crucial for proxy/workstation environments
+      localCache: memoryLocalCache(),      // Use memory cache to avoid persistence errors
     });
   } catch (e) {
     // If already initialized, get the existing instance
