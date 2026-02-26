@@ -1,7 +1,7 @@
 'use client';
 
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getFirestore, Firestore, initializeFirestore } from 'firebase/firestore';
+import { getFirestore, Firestore, initializeFirestore, CACHE_SIZE_UNLIMITED } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { firebaseConfig } from './config';
 
@@ -22,9 +22,12 @@ export function initializeFirebase() {
   let db: Firestore;
   try {
     // Attempt to initialize Firestore with forced long-polling
-    // This is critical for reliability in proxy-heavy environments
+    // We use a high-reliability configuration for proxy environments
     db = initializeFirestore(app, {
       experimentalForceLongPolling: true,
+      localCache: {
+        kind: 'persistent',
+      }
     });
   } catch (e) {
     // If already initialized, get the existing instance

@@ -1,15 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ParkingCircle, Mail, Lock, Loader2, AlertCircle } from "lucide-react";
+import { ParkingCircle, Mail, Lock, Loader2, AlertCircle, WifiOff } from "lucide-react";
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { useAuth, useFirestore } from "@/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, enableNetwork, disableNetwork } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -18,6 +18,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<{title: string, message: string} | null>(null);
   
   const auth = useAuth();
@@ -31,25 +32,51 @@ export default function LoginPage() {
 
     setLoading(true);
     setErrorMessage(null);
+    setStatus("Authenticating...");
+
     try {
+      // 1. Authenticate with Auth Service
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       
-      // Check Firestore for user profile
-      const userDocRef = doc(db, "users", userCredential.user.uid);
-      const userDoc = await getDoc(userDocRef);
+      // 2. Attempt to fetch profile with a timeout
+      setStatus("Connecting to profile database...");
       
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        toast({
-          title: "Welcome back!",
-          description: `Signed in as ${userData.displayName || 'User'}.`,
-        });
-        router.replace(`/dashboard/${userData.role}`);
-      } else {
-        setErrorMessage({
-          title: "Profile Not Found",
-          message: "Account authenticated, but no profile was found. Please sign up to create a role."
-        });
+      const userDocRef = doc(db, "users", userCredential.user.uid);
+      
+      // Firestore getDoc can hang if network is 'offline'
+      // We wrap it in a promise that rejects after 10 seconds
+      const profilePromise = getDoc(userDocRef);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("timeout")), 10000)
+      );
+
+      try {
+        const userDoc = await Promise.race([profilePromise, timeoutPromise]) as any;
+        
+        if (userDoc && userDoc.exists()) {
+          const userData = userDoc.data();
+          toast({
+            title: "Welcome back!",
+            description: `Signed in as ${userData.displayName || 'User'}.`,
+          });
+          router.replace(`/dashboard/${userData.role}`);
+        } else {
+          setErrorMessage({
+            title: "Profile Not Found",
+            message: "Account authenticated, but no profile was found in Firestore. Please sign up again."
+          });
+          setLoading(false);
+        }
+      } catch (err: any) {
+        if (err.message === "timeout") {
+          setErrorMessage({
+            title: "Database Timeout",
+            message: "The authentication was successful, but the profile server is taking too long to respond. This usually happens in restricted networks. Please refresh and try again."
+          });
+        } else {
+          throw err;
+        }
+        setLoading(false);
       }
     } catch (error: any) {
       console.error("Login error:", error);
@@ -58,19 +85,17 @@ export default function LoginPage() {
       
       if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
         message = "Invalid email or password. Please try again.";
-      } else if (error.code === 'auth/network-request-failed' || error.message?.includes('offline')) {
-        title = "Connection Error";
-        message = "The server is taking too long to respond. Please check your internet or ensure the domain is authorized in Firebase.";
-      } else if (error.code === 'auth/unauthorized-domain') {
-        title = "Unauthorized Domain";
-        message = "This domain is not authorized in your Firebase console. Please add it to the 'Authorized Domains' list.";
+      } else if (error.code === 'auth/network-request-failed') {
+        title = "Network Error";
+        message = "Check your internet connection or verify the Firebase API key.";
       } else {
         message = error.message || "Failed to sign in.";
       }
       
       setErrorMessage({ title, message });
-    } finally {
       setLoading(false);
+    } finally {
+      setStatus(null);
     }
   };
 
@@ -85,10 +110,6 @@ export default function LoginPage() {
       const userDoc = await getDoc(userDocRef);
 
       if (!userDoc.exists()) {
-        toast({
-          title: "Welcome!",
-          description: "Please complete your registration to choose a role.",
-        });
         router.push("/signup?step=role"); 
       } else {
         router.replace(`/dashboard/${userDoc.data().role}`);
@@ -99,7 +120,6 @@ export default function LoginPage() {
         title: "Google Sign-In Error",
         message: error.message || "Authentication failed."
       });
-    } finally {
       setLoading(false);
     }
   };
@@ -126,6 +146,14 @@ export default function LoginPage() {
               <AlertDescription>{errorMessage.message}</AlertDescription>
             </Alert>
           )}
+
+          {status && !errorMessage && (
+            <div className="flex items-center gap-3 p-3 bg-muted rounded-lg text-sm text-muted-foreground animate-pulse">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              {status}
+            </div>
+          )}
+
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email Address</Label>

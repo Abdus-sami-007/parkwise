@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/app-sidebar";
@@ -9,9 +9,11 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Toaster } from "@/components/ui/toaster";
 import { useUser, useFirestore } from "@/firebase";
 import { doc, getDoc } from "firebase/firestore";
-import { Loader2 } from "lucide-react";
+import { Loader2, WifiOff } from "lucide-react";
 import { useParkStore } from "@/hooks/use-park-store";
 import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 
 export default function DashboardLayout({
   children,
@@ -24,50 +26,50 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const { toast } = useToast();
   const [roleLoading, setRoleLoading] = useState(true);
+  const [isOffline, setIsOffline] = useState(false);
   const initSync = useParkStore(state => state.initSync);
+  const checkAttempts = useRef(0);
 
-  // Memoized checkRole function to prevent unnecessary re-runs
   const checkRole = useCallback(async () => {
     if (!user || !db) return;
 
     try {
       const userDocRef = doc(db, "users", user.uid);
-      const userDoc = await getDoc(userDocRef);
       
-      if (userDoc.exists()) {
+      // Attempt with timeout
+      const docPromise = getDoc(userDocRef);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("timeout")), 8000)
+      );
+
+      const userDoc = await Promise.race([docPromise, timeoutPromise]) as any;
+      
+      if (userDoc && userDoc.exists()) {
         const userData = userDoc.data();
         const role = userData.role;
+        setIsOffline(false);
         
-        // Redirect if on the wrong dashboard for their role
         if (!pathname.includes(`/dashboard/${role}`)) {
-          console.log(`Redirecting to /dashboard/${role}`);
           router.replace(`/dashboard/${role}`);
         } else {
           setRoleLoading(false);
         }
       } else {
-        toast({
-          variant: "destructive",
-          title: "Profile Missing",
-          description: "We couldn't find your profile. Please sign up.",
-        });
         router.replace("/signup");
       }
     } catch (e: any) {
-      console.error("Dashboard check error:", e);
-      if (e.message?.includes('offline') || e.code === 'unavailable') {
-        toast({
-          variant: "destructive",
-          title: "Connection Issue",
-          description: "Retrying connection to profile server...",
-        });
-        // Retry once after a delay
-        setTimeout(checkRole, 3000);
+      console.error("Dashboard role check error:", e);
+      if (e.message === "timeout" || e.code === 'unavailable') {
+        setIsOffline(true);
+        checkAttempts.current += 1;
+        if (checkAttempts.current < 3) {
+          setTimeout(checkRole, 3000);
+        }
       } else {
         setRoleLoading(false);
       }
     }
-  }, [user, db, pathname, router, toast]);
+  }, [user, db, pathname, router]);
 
   useEffect(() => {
     if (!authLoading) {
@@ -80,11 +82,32 @@ export default function DashboardLayout({
     }
   }, [user, authLoading, db, checkRole, initSync, router]);
 
-  if (authLoading || (user && roleLoading)) {
+  if (authLoading || (user && roleLoading && !isOffline)) {
     return (
       <div className="h-screen w-screen flex flex-col items-center justify-center bg-background gap-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="text-muted-foreground animate-pulse font-medium">Verifying account access...</p>
+        <p className="text-muted-foreground animate-pulse font-medium">Connecting to secure services...</p>
+      </div>
+    );
+  }
+
+  if (isOffline) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center p-6">
+        <div className="max-w-md w-full space-y-6 text-center">
+          <div className="bg-muted p-6 rounded-full w-24 h-24 flex items-center justify-center mx-auto">
+            <WifiOff className="h-10 w-10 text-muted-foreground" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold">Connection Sluggish</h1>
+            <p className="text-muted-foreground">
+              We're having trouble reaching the database. This usually happens on restricted networks or during initial setup.
+            </p>
+          </div>
+          <Button onClick={() => window.location.reload()} className="w-full">
+            Retry Connection
+          </Button>
+        </div>
       </div>
     );
   }
