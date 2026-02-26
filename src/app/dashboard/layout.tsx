@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/app-sidebar";
@@ -8,11 +8,9 @@ import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Toaster } from "@/components/ui/toaster";
 import { useUser, useFirestore } from "@/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, onSnapshot } from "firebase/firestore";
 import { Loader2, WifiOff } from "lucide-react";
 import { useParkStore } from "@/hooks/use-park-store";
-import { useToast } from "@/hooks/use-toast";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 
 export default function DashboardLayout({
@@ -24,69 +22,51 @@ export default function DashboardLayout({
   const db = useFirestore();
   const router = useRouter();
   const pathname = usePathname();
-  const { toast } = useToast();
-  const [roleLoading, setRoleLoading] = useState(true);
+  const [roleChecked, setRoleChecked] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const initSync = useParkStore(state => state.initSync);
-  const checkAttempts = useRef(0);
 
-  const checkRole = useCallback(async () => {
-    if (!user || !db) return;
+  useEffect(() => {
+    if (authLoading) return;
 
-    try {
-      const userDocRef = doc(db, "users", user.uid);
-      
-      // Attempt with timeout
-      const docPromise = getDoc(userDocRef);
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("timeout")), 8000)
-      );
+    if (!user) {
+      router.replace("/login");
+      return;
+    }
 
-      const userDoc = await Promise.race([docPromise, timeoutPromise]) as any;
-      
-      if (userDoc && userDoc.exists()) {
-        const userData = userDoc.data();
-        const role = userData.role;
-        setIsOffline(false);
-        
+    if (!db) return;
+
+    // Start data sync
+    initSync(db);
+
+    // Use a listener for the user role to handle connectivity drops gracefully
+    const unsub = onSnapshot(doc(db, "users", user.uid), (snapshot) => {
+      setIsOffline(false);
+      if (snapshot.exists()) {
+        const role = snapshot.data().role;
+        // Basic routing based on role if not on a subpath of that role
         if (!pathname.includes(`/dashboard/${role}`)) {
           router.replace(`/dashboard/${role}`);
         } else {
-          setRoleLoading(false);
+          setRoleChecked(true);
         }
       } else {
+        // User doc missing
         router.replace("/signup");
       }
-    } catch (e: any) {
-      console.error("Dashboard role check error:", e);
-      if (e.message === "timeout" || e.code === 'unavailable') {
-        setIsOffline(true);
-        checkAttempts.current += 1;
-        if (checkAttempts.current < 3) {
-          setTimeout(checkRole, 3000);
-        }
-      } else {
-        setRoleLoading(false);
-      }
-    }
-  }, [user, db, pathname, router]);
+    }, (error) => {
+      console.error("Profile listen error:", error);
+      setIsOffline(true);
+    });
 
-  useEffect(() => {
-    if (!authLoading) {
-      if (!user) {
-        router.replace("/login");
-      } else if (db) {
-        checkRole();
-        initSync(db);
-      }
-    }
-  }, [user, authLoading, db, checkRole, initSync, router]);
+    return () => unsub();
+  }, [user, authLoading, db, pathname, router, initSync]);
 
-  if (authLoading || (user && roleLoading && !isOffline)) {
+  if (authLoading || (user && !roleChecked && !isOffline)) {
     return (
       <div className="h-screen w-screen flex flex-col items-center justify-center bg-background gap-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="text-muted-foreground animate-pulse font-medium">Connecting to secure services...</p>
+        <p className="text-muted-foreground animate-pulse font-medium">Authorizing access...</p>
       </div>
     );
   }
@@ -99,9 +79,9 @@ export default function DashboardLayout({
             <WifiOff className="h-10 w-10 text-muted-foreground" />
           </div>
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold">Connection Sluggish</h1>
+            <h1 className="text-2xl font-bold">Network Connection Issue</h1>
             <p className="text-muted-foreground">
-              We're having trouble reaching the database. This usually happens on restricted networks or during initial setup.
+              We're having trouble connecting to the real-time database. Please check your internet connection.
             </p>
           </div>
           <Button onClick={() => window.location.reload()} className="w-full">

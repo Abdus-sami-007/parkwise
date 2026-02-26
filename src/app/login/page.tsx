@@ -18,7 +18,6 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<{title: string, message: string} | null>(null);
   
   const auth = useAuth();
@@ -32,59 +31,39 @@ export default function LoginPage() {
 
     setLoading(true);
     setErrorMessage(null);
-    setStatus("Checking credentials...");
 
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      setStatus("Loading profile from server...");
-      
       const userDocRef = doc(db, "users", userCredential.user.uid);
+      const userDoc = await getDoc(userDocRef);
       
-      // Attempt profile fetch with timeout to prevent "forever" hang
-      const profilePromise = getDoc(userDocRef);
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("timeout")), 8000)
-      );
-
-      const userDoc = await Promise.race([profilePromise, timeoutPromise]) as any;
-      
-      if (userDoc && userDoc.exists()) {
+      if (userDoc.exists()) {
         const userData = userDoc.data();
-        toast({
-          title: "Success",
-          description: `Welcome back, ${userData.displayName || 'User'}.`,
-        });
         router.replace(`/dashboard/${userData.role}`);
+        toast({ title: "Welcome back!", description: "Successfully signed in." });
       } else {
         setErrorMessage({
-          title: "Profile Missing",
-          message: "Auth successful, but no Firestore record found. Try signing up."
+          title: "Account Incomplete",
+          message: "Auth successful, but no user profile found. Please contact support or try signing up."
         });
         setLoading(false);
       }
     } catch (error: any) {
       console.error("Login error:", error);
-      let title = "Sign-in Failed";
-      let message = error.message || "An unexpected error occurred.";
-      
-      if (error.message === "timeout") {
-        title = "Database Timeout";
-        message = "The server is taking too long to respond. Please check your internet or Firebase Authorized Domains.";
-      } else if (error.code === 'auth/invalid-credential') {
-        message = "Invalid email or password.";
+      let message = "Invalid email or password.";
+      if (error.code === 'auth/unauthorized-domain') {
+        message = "This domain is not authorized. Please add it to Firebase Auth settings.";
+      } else if (error.code === 'auth/network-request-failed') {
+        message = "Network error. Please check your connection.";
       }
-      
-      setErrorMessage({ title, message });
+      setErrorMessage({ title: "Sign-in Failed", message });
       setLoading(false);
-    } finally {
-      setStatus(null);
     }
   };
 
   const loginWithGoogle = async () => {
     if (!auth || !db) return;
     setLoading(true);
-    setErrorMessage(null);
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
@@ -123,13 +102,6 @@ export default function LoginPage() {
               <AlertTitle>{errorMessage.title}</AlertTitle>
               <AlertDescription>{errorMessage.message}</AlertDescription>
             </Alert>
-          )}
-
-          {status && (
-            <div className="flex items-center gap-3 p-3 bg-primary/5 rounded-lg text-sm text-primary animate-pulse">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              {status}
-            </div>
           )}
 
           <form onSubmit={handleLogin} className="space-y-4">
