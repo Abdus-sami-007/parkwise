@@ -1,10 +1,14 @@
 'use client';
 
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getFirestore, Firestore, initializeFirestore, connectFirestoreEmulator } from 'firebase/firestore';
-import { getAuth, Auth } from 'firebase/auth';
+import { getFirestore, Firestore, initializeFirestore } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 import { firebaseConfig } from './config';
 
+/**
+ * Initializes Firebase with specific optimizations for Cloud Workstation environments.
+ * Forces long polling for Firestore to avoid WebSocket connectivity issues.
+ */
 export function initializeFirebase() {
   const apps = getApps();
   let app: FirebaseApp;
@@ -15,10 +19,17 @@ export function initializeFirebase() {
     app = initializeApp(firebaseConfig);
   }
 
-  // Use initializeFirestore to force long polling, which is more reliable in proxy/workstation environments
-  const db = initializeFirestore(app, {
-    experimentalForceLongPolling: true,
-  });
+  let db: Firestore;
+  try {
+    // Attempt to initialize Firestore with forced long-polling
+    // This is critical for reliability in proxy-heavy environments
+    db = initializeFirestore(app, {
+      experimentalForceLongPolling: true,
+    });
+  } catch (e) {
+    // If already initialized, get the existing instance
+    db = getFirestore(app);
+  }
   
   const auth = getAuth(app);
 

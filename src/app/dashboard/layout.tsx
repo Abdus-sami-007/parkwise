@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/app-sidebar";
@@ -26,64 +26,60 @@ export default function DashboardLayout({
   const [roleLoading, setRoleLoading] = useState(true);
   const initSync = useParkStore(state => state.initSync);
 
-  useEffect(() => {
-    if (db && user) {
-      initSync(db);
-    }
-  }, [initSync, db, user]);
+  // Memoized checkRole function to prevent unnecessary re-runs
+  const checkRole = useCallback(async () => {
+    if (!user || !db) return;
 
-  useEffect(() => {
-    if (authLoading) return;
-
-    if (!user) {
-      router.replace("/login");
-      return;
-    }
-
-    const checkRole = async () => {
-      if (user && db) {
-        try {
-          // Explicitly fetch the user profile to confirm role and permissions
-          const userDocRef = doc(db, "users", user.uid);
-          const userDoc = await getDoc(userDocRef);
-          
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            const role = userData.role;
-            
-            // If the user is on the wrong dashboard for their role, redirect them
-            if (!pathname.includes(`/dashboard/${role}`)) {
-              console.log(`Redirecting to correct dashboard for role: ${role}`);
-              router.replace(`/dashboard/${role}`);
-            }
-          } else {
-            console.warn("User document not found in Firestore.");
-            toast({
-              variant: "destructive",
-              title: "Profile Missing",
-              description: "We couldn't find your user profile. Please try signing up again.",
-            });
-            // If the profile document is missing, we might need to send them to a profile setup or back to login
-          }
-        } catch (e: any) {
-          console.error("Error checking user role in layout:", e);
-          if (e.code === 'permission-denied') {
-            toast({
-              variant: "destructive",
-              title: "Access Denied",
-              description: "You don't have permission to access this data. Check Firestore rules.",
-            });
-          }
-        } finally {
+    try {
+      const userDocRef = doc(db, "users", user.uid);
+      const userDoc = await getDoc(userDocRef);
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        const role = userData.role;
+        
+        // Redirect if on the wrong dashboard for their role
+        if (!pathname.includes(`/dashboard/${role}`)) {
+          console.log(`Redirecting to /dashboard/${role}`);
+          router.replace(`/dashboard/${role}`);
+        } else {
           setRoleLoading(false);
         }
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Profile Missing",
+          description: "We couldn't find your profile. Please sign up.",
+        });
+        router.replace("/signup");
       }
-    };
+    } catch (e: any) {
+      console.error("Dashboard check error:", e);
+      if (e.message?.includes('offline') || e.code === 'unavailable') {
+        toast({
+          variant: "destructive",
+          title: "Connection Issue",
+          description: "Retrying connection to profile server...",
+        });
+        // Retry once after a delay
+        setTimeout(checkRole, 3000);
+      } else {
+        setRoleLoading(false);
+      }
+    }
+  }, [user, db, pathname, router, toast]);
 
-    checkRole();
-  }, [user, authLoading, router, pathname, db, toast]);
+  useEffect(() => {
+    if (!authLoading) {
+      if (!user) {
+        router.replace("/login");
+      } else if (db) {
+        checkRole();
+        initSync(db);
+      }
+    }
+  }, [user, authLoading, db, checkRole, initSync, router]);
 
-  // Loading screen for initial auth or role verification
   if (authLoading || (user && roleLoading)) {
     return (
       <div className="h-screen w-screen flex flex-col items-center justify-center bg-background gap-4">
@@ -93,7 +89,6 @@ export default function DashboardLayout({
     );
   }
 
-  // Final check to prevent unauthorized render
   if (!user) return null;
 
   return (

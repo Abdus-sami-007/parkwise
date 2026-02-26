@@ -13,7 +13,7 @@ import { useAuth, useFirestore } from "@/firebase";
 import { doc, setDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function SignupPage() {
   const [name, setName] = useState("");
@@ -22,7 +22,7 @@ export default function SignupPage() {
   const [phone, setPhone] = useState("");
   const [role, setRole] = useState<string>("customer");
   const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<{title: string, message: string} | null>(null);
   
   const auth = useAuth();
   const db = useFirestore();
@@ -39,50 +39,45 @@ export default function SignupPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // 1. Update the Auth profile
+      // Update Firebase Auth profile
       await updateProfile(user, { displayName: name });
 
-      // 2. Prepare user profile document
-      const userData = {
+      // Create profile document in Firestore
+      const userDocRef = doc(db, "users", user.uid);
+      await setDoc(userDocRef, {
         uid: user.uid,
         email: user.email,
         displayName: name,
         role: role,
         phone: phone,
         createdAt: new Date().toISOString()
-      };
-
-      // 3. Save profile to Firestore
-      const userDocRef = doc(db, "users", user.uid);
-      await setDoc(userDocRef, userData);
+      });
 
       toast({
         title: "Account Created!",
-        description: `Welcome to ParkWise, ${name}. Redirecting to your dashboard...`,
+        description: "Welcome to ParkWise. Getting things ready...",
       });
 
-      // Give Firestore a moment to propagate before redirecting to the role-protected dashboard
-      setTimeout(() => {
-        router.push(`/dashboard/${role}`);
-      }, 500);
+      // Navigate to correct dashboard
+      router.replace(`/dashboard/${role}`);
 
     } catch (error: any) {
       console.error("Signup error:", error);
-      let message = "Failed to create account.";
+      let title = "Signup Failed";
+      let message = "We couldn't create your account.";
       
       if (error.code === 'auth/email-already-in-use') {
         message = "This email is already registered.";
       } else if (error.code === 'auth/weak-password') {
-        message = "Password should be at least 6 characters.";
-      } else if (error.code === 'auth/network-request-failed') {
-        message = "Network error. Check your connection or authorized domains in Firebase.";
-      } else if (error.code === 'permission-denied') {
-        message = "Profile saved but access denied by Firestore rules. Please check rules for 'users' collection.";
+        message = "Password must be at least 6 characters.";
+      } else if (error.code === 'auth/network-request-failed' || error.message?.includes('offline')) {
+        title = "Connection Timeout";
+        message = "The request is taking too long. Please ensure your Firebase settings allow this domain.";
       } else {
         message = error.message || "An unexpected error occurred.";
       }
       
-      setErrorMessage(message);
+      setErrorMessage({ title, message });
     } finally {
       setLoading(false);
     }
@@ -90,16 +85,16 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md shadow-xl border-none">
+      <Card className="w-full max-w-md shadow-2xl border-none">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
             <div className="bg-primary p-3 rounded-2xl shadow-lg shadow-primary/20">
               <ParkingCircle className="h-8 w-8 text-white" />
             </div>
           </div>
-          <CardTitle className="text-3xl font-bold font-headline">Create account</CardTitle>
+          <CardTitle className="text-3xl font-bold font-headline">Join ParkWise</CardTitle>
           <CardDescription>
-            Choose your role and join the smart parking network
+            Create an account to start managing your parking
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -107,19 +102,21 @@ export default function SignupPage() {
             {errorMessage && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{errorMessage}</AlertDescription>
+                <AlertTitle>{errorMessage.title}</AlertTitle>
+                <AlertDescription>{errorMessage.message}</AlertDescription>
               </Alert>
             )}
+            
             <div className="space-y-2">
-              <Label htmlFor="role">I am a...</Label>
+              <Label htmlFor="role">User Role</Label>
               <Select value={role} onValueChange={setRole}>
                 <SelectTrigger className="h-11">
                   <SelectValue placeholder="Select your role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="customer">Customer (Finding Parking)</SelectItem>
-                  <SelectItem value="owner">Property Owner (Listing Land)</SelectItem>
-                  <SelectItem value="guard">Security Guard (Live Patrol)</SelectItem>
+                  <SelectItem value="customer">Driver (Book Parking)</SelectItem>
+                  <SelectItem value="owner">Land Owner (List Property)</SelectItem>
+                  <SelectItem value="guard">Security (Manage Patrols)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -134,13 +131,14 @@ export default function SignupPage() {
                   className="pl-10 h-11"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                  disabled={loading}
                   required 
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email Address</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input 
@@ -150,6 +148,7 @@ export default function SignupPage() {
                   className="pl-10 h-11"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
                   required 
                 />
               </div>
@@ -161,10 +160,11 @@ export default function SignupPage() {
                 <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input 
                   id="phone" 
-                  placeholder="+91 98765 43210" 
+                  placeholder="+91 XXXXX XXXXX" 
                   className="pl-10 h-11"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
+                  disabled={loading}
                   required
                 />
               </div>
@@ -181,19 +181,20 @@ export default function SignupPage() {
                   className="pl-10 h-11"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
                   required 
                 />
               </div>
             </div>
 
             <Button type="submit" className="w-full h-11 text-lg font-bold mt-4 gap-2" disabled={loading}>
-              {loading ? <Loader2 className="animate-spin h-5 w-5" /> : <>Complete Sign Up <ArrowRight className="h-5 w-5" /></>}
+              {loading ? <Loader2 className="animate-spin h-5 w-5" /> : <>Create Account <ArrowRight className="h-5 w-5" /></>}
             </Button>
           </form>
         </CardContent>
         <CardFooter className="text-center">
           <p className="text-sm text-muted-foreground w-full">
-            Already using ParkWise? <Link href="/login" className="text-primary font-bold hover:underline">Sign in</Link>
+            Already have an account? <Link href="/login" className="text-primary font-bold hover:underline">Sign in</Link>
           </p>
         </CardFooter>
       </Card>

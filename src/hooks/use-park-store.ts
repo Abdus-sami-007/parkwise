@@ -9,7 +9,9 @@ import {
   updateDoc, 
   addDoc, 
   serverTimestamp,
-  Firestore
+  Firestore,
+  query,
+  limit
 } from 'firebase/firestore';
 
 interface ParkState {
@@ -17,6 +19,7 @@ interface ParkState {
   slots: Record<string, ParkingSlot[]>;
   bookings: Booking[];
   loading: boolean;
+  isInitialized: boolean;
   
   // Real-time Sync
   initSync: (db: Firestore) => void;
@@ -31,13 +34,17 @@ export const useParkStore = create<ParkState>((set, get) => ({
   slots: {},
   bookings: [],
   loading: true,
+  isInitialized: false,
 
   initSync: (db) => {
-    // Sync Lands
-    const landsQuery = collection(db, 'parkingLands');
-    onSnapshot(landsQuery, (snapshot) => {
+    if (get().isInitialized) return;
+
+    // Sync Lands with a limit for faster initial load
+    const landsQuery = query(collection(db, 'parkingLands'), limit(20));
+    
+    const unsubLands = onSnapshot(landsQuery, { includeMetadataChanges: true }, (snapshot) => {
       const lands = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ParkingLand));
-      set({ lands, loading: false });
+      set({ lands, loading: false, isInitialized: true });
 
       // For each land, sync its slots
       lands.forEach(land => {
@@ -49,36 +56,46 @@ export const useParkStore = create<ParkState>((set, get) => ({
           }));
         });
       });
+    }, (error) => {
+      console.error("Firestore Lands Sync Error:", error);
     });
 
     // Sync Bookings
-    const bookingsQuery = collection(db, 'bookings');
-    onSnapshot(bookingsQuery, (snapshot) => {
+    const bookingsQuery = query(collection(db, 'bookings'), limit(50));
+    const unsubBookings = onSnapshot(bookingsQuery, (snapshot) => {
       const bookings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Booking));
       set({ bookings });
+    }, (error) => {
+      console.error("Firestore Bookings Sync Error:", error);
     });
   },
 
   updateSlotStatus: async (db, landId, slotId, status, vehicle) => {
     const slotRef = doc(db, 'parkingLands', landId, 'slots', slotId);
-    await updateDoc(slotRef, {
+    // Optimistic background update
+    updateDoc(slotRef, {
       status,
       currentVehicle: vehicle || null,
       updatedAt: serverTimestamp()
-    });
+    }).catch(e => console.error("Slot status update failed", e));
   },
 
   createBooking: async (db, bookingData) => {
-    const bookingRef = await addDoc(collection(db, 'bookings'), {
-      ...bookingData,
-      createdAt: serverTimestamp()
-    });
+    try {
+      const bookingRef = await addDoc(collection(db, 'bookings'), {
+        ...bookingData,
+        createdAt: serverTimestamp()
+      });
 
-    const slotRef = doc(db, 'parkingLands', bookingData.landId, 'slots', bookingData.slotId);
-    await updateDoc(slotRef, {
-      status: 'booked',
-      bookedBy: bookingData.userId,
-      currentBookingId: bookingRef.id
-    });
+      const slotRef = doc(db, 'parkingLands', bookingData.landId, 'slots', bookingData.slotId);
+      await updateDoc(slotRef, {
+        status: 'booked',
+        bookedBy: bookingData.userId,
+        currentBookingId: bookingRef.id
+      });
+    } catch (e) {
+      console.error("Booking creation failed", e);
+      throw e;
+    }
   },
 }));
