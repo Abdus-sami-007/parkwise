@@ -32,19 +32,35 @@ export default function LoginPage() {
     setErrorMessage(null);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
+      
+      // Verification step: Check if Firestore document exists
+      const userDocRef = doc(db, "users", userCredential.user.uid);
+      const userDoc = await getDoc(userDocRef);
       
       if (userDoc.exists()) {
         const userData = userDoc.data();
+        toast({
+          title: "Success",
+          description: `Welcome back, ${userData.displayName || 'User'}!`,
+        });
         router.push(`/dashboard/${userData.role}`);
       } else {
-        setErrorMessage("Profile missing. No role assigned to this account.");
+        setErrorMessage("Login successful, but your profile details are missing in the database. Please contact support or try signing up again.");
       }
     } catch (error: any) {
       console.error("Login error:", error);
-      const message = error.code === 'auth/network-request-failed' 
-        ? "Network error. Please check your connection or authorized domains." 
-        : error.message;
+      let message = "An error occurred during login.";
+      
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+        message = "Invalid email or password. Please try again.";
+      } else if (error.code === 'auth/network-request-failed') {
+        message = "Network error. Please check your internet connection and ensure your Firebase domain is authorized.";
+      } else if (error.code === 'permission-denied') {
+        message = "Firestore permission error. Ensure security rules allow user profile reads.";
+      } else {
+        message = error.message || "Failed to sign in.";
+      }
+      
       setErrorMessage(message);
     } finally {
       setLoading(false);
@@ -58,17 +74,22 @@ export default function LoginPage() {
     try {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
-      const userDoc = await getDoc(doc(db, "users", result.user.uid));
+      const userDocRef = doc(db, "users", result.user.uid);
+      const userDoc = await getDoc(userDocRef);
 
       if (!userDoc.exists()) {
-        // Default new Google users to customers
+        // If it's a new Google user, they need to pick a role
+        toast({
+          title: "First time here?",
+          description: "Please complete your profile to continue.",
+        });
         router.push("/signup?role=customer"); 
       } else {
         router.push(`/dashboard/${userDoc.data().role}`);
       }
     } catch (error: any) {
       console.error("Google login error:", error);
-      setErrorMessage(error.message);
+      setErrorMessage(error.message || "Google sign-in failed.");
     } finally {
       setLoading(false);
     }

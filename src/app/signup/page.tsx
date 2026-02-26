@@ -39,8 +39,10 @@ export default function SignupPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
+      // 1. Update the Auth profile
       await updateProfile(user, { displayName: name });
 
+      // 2. Prepare user profile document
       const userData = {
         uid: user.uid,
         email: user.email,
@@ -50,19 +52,36 @@ export default function SignupPage() {
         createdAt: new Date().toISOString()
       };
 
-      await setDoc(doc(db, "users", user.uid), userData);
+      // 3. Save profile to Firestore
+      const userDocRef = doc(db, "users", user.uid);
+      await setDoc(userDocRef, userData);
 
       toast({
-        title: "Account created!",
-        description: `Welcome to ParkWise, ${name}. Your role is ${role}.`,
+        title: "Account Created!",
+        description: `Welcome to ParkWise, ${name}. Redirecting to your dashboard...`,
       });
 
-      router.push(`/dashboard/${role}`);
+      // Give Firestore a moment to propagate before redirecting to the role-protected dashboard
+      setTimeout(() => {
+        router.push(`/dashboard/${role}`);
+      }, 500);
+
     } catch (error: any) {
       console.error("Signup error:", error);
-      const message = error.code === 'auth/network-request-failed' 
-        ? "Network error. Firebase might be blocked or domain not authorized." 
-        : error.message;
+      let message = "Failed to create account.";
+      
+      if (error.code === 'auth/email-already-in-use') {
+        message = "This email is already registered.";
+      } else if (error.code === 'auth/weak-password') {
+        message = "Password should be at least 6 characters.";
+      } else if (error.code === 'auth/network-request-failed') {
+        message = "Network error. Check your connection or authorized domains in Firebase.";
+      } else if (error.code === 'permission-denied') {
+        message = "Profile saved but access denied by Firestore rules. Please check rules for 'users' collection.";
+      } else {
+        message = error.message || "An unexpected error occurred.";
+      }
+      
       setErrorMessage(message);
     } finally {
       setLoading(false);
