@@ -9,7 +9,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Toaster } from "@/components/ui/toaster";
 import { useUser, useFirestore } from "@/firebase";
 import { doc, onSnapshot } from "firebase/firestore";
-import { Loader2, WifiOff } from "lucide-react";
+import { Loader2, WifiOff, RefreshCcw } from "lucide-react";
 import { useParkStore } from "@/hooks/use-park-store";
 import { Button } from "@/components/ui/button";
 
@@ -24,6 +24,7 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const [roleChecked, setRoleChecked] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
+  const [takingLongTime, setTakingLongTime] = useState(false);
   const initSync = useParkStore(state => state.initSync);
 
   useEffect(() => {
@@ -39,53 +40,71 @@ export default function DashboardLayout({
     // Start data sync
     initSync(db);
 
-    // Use a listener for the user role to handle connectivity drops gracefully
+    // Timeout to detect slow connectivity
+    const timer = setTimeout(() => {
+      if (!roleChecked) setTakingLongTime(true);
+    }, 8000);
+
     const unsub = onSnapshot(doc(db, "users", user.uid), (snapshot) => {
       setIsOffline(false);
+      setTakingLongTime(false);
       if (snapshot.exists()) {
         const role = snapshot.data().role;
-        // Basic routing based on role if not on a subpath of that role
         if (!pathname.includes(`/dashboard/${role}`)) {
           router.replace(`/dashboard/${role}`);
         } else {
           setRoleChecked(true);
         }
       } else {
-        // User doc missing
-        router.replace("/signup");
+        // Fallback for new signups where Firestore might be slow to propagate
+        // Wait a bit or assume the signup worked and role is in state
+        console.warn("User profile not found in Firestore yet.");
       }
     }, (error) => {
       console.error("Profile listen error:", error);
       setIsOffline(true);
     });
 
-    return () => unsub();
-  }, [user, authLoading, db, pathname, router, initSync]);
+    return () => {
+      unsub();
+      clearTimeout(timer);
+    };
+  }, [user, authLoading, db, pathname, router, initSync, roleChecked]);
 
   if (authLoading || (user && !roleChecked && !isOffline)) {
     return (
-      <div className="h-screen w-screen flex flex-col items-center justify-center bg-background gap-4">
+      <div className="h-screen w-screen flex flex-col items-center justify-center bg-background gap-4 p-6 text-center">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="text-muted-foreground animate-pulse font-medium">Authorizing access...</p>
+        <div className="space-y-2">
+          <p className="text-muted-foreground animate-pulse font-medium">Connecting to secure server...</p>
+          {takingLongTime && (
+            <div className="mt-4 animate-in fade-in slide-in-from-bottom-2">
+              <p className="text-xs text-amber-600 font-semibold mb-3">The connection is taking longer than expected.</p>
+              <Button variant="outline" size="sm" onClick={() => window.location.reload()} className="gap-2">
+                <RefreshCcw className="h-3 w-3" /> Refresh Connection
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
     );
   }
 
   if (isOffline) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center p-6">
+      <div className="h-screen w-screen flex items-center justify-center p-6 bg-background">
         <div className="max-w-md w-full space-y-6 text-center">
-          <div className="bg-muted p-6 rounded-full w-24 h-24 flex items-center justify-center mx-auto">
+          <div className="bg-muted p-6 rounded-full w-24 h-24 flex items-center justify-center mx-auto shadow-inner">
             <WifiOff className="h-10 w-10 text-muted-foreground" />
           </div>
           <div className="space-y-2">
             <h1 className="text-2xl font-bold">Network Connection Issue</h1>
             <p className="text-muted-foreground">
-              We're having trouble connecting to the real-time database. Please check your internet connection.
+              We're having trouble connecting to the real-time database. Please check your internet connection or try again.
             </p>
           </div>
-          <Button onClick={() => window.location.reload()} className="w-full">
-            Retry Connection
+          <Button onClick={() => window.location.reload()} className="w-full gap-2">
+            <RefreshCcw className="h-4 w-4" /> Retry Connection
           </Button>
         </div>
       </div>

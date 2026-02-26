@@ -7,13 +7,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ParkingCircle, Mail, Lock, User, Loader2, Phone, ArrowRight, AlertCircle } from "lucide-react";
+import { ParkingCircle, Loader2, ArrowRight, AlertCircle } from "lucide-react";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { useAuth, useFirestore } from "@/firebase";
 import { doc, setDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function SignupPage() {
   const [name, setName] = useState("");
@@ -42,33 +44,49 @@ export default function SignupPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      setStatus("Syncing with profile server...");
+      setStatus("Syncing profile...");
+      // We await updateProfile because it's an Auth service call, but it's usually fast.
       await updateProfile(user, { displayName: name });
 
       const userDocRef = doc(db, "users", user.uid);
-      await setDoc(userDocRef, {
+      const userData = {
         uid: user.uid,
         email: user.email,
         displayName: name,
         role: role,
         phone: phone,
         createdAt: new Date().toISOString()
+      };
+
+      // CRITICAL: Do NOT await setDoc here. Proceed to dashboard immediately.
+      // Firebase will sync this in the background using long-polling.
+      setDoc(userDocRef, userData).catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: userDocRef.path,
+          operation: 'create',
+          requestResourceData: userData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
       });
 
       toast({
         title: "Welcome!",
-        description: "Account created successfully.",
+        description: "Your account is being ready.",
       });
 
+      // Redirect immediately
       router.replace(`/dashboard/${role}`);
 
     } catch (error: any) {
       console.error("Signup error:", error);
+      let message = error.message || "Please check your internet connection.";
+      if (error.code === 'auth/email-already-in-use') {
+        message = "This email is already registered.";
+      }
       setErrorMessage({
         title: "Registration Failed",
-        message: error.message || "Please check your internet connection and try again."
+        message: message
       });
-    } finally {
       setLoading(false);
       setStatus(null);
     }
