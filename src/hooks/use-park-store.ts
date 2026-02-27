@@ -3,39 +3,23 @@
 
 import { create } from 'zustand';
 import { ParkingLand, ParkingSlot, Booking, UserProfile } from '@/lib/types';
-import { 
-  collection, 
-  onSnapshot, 
-  doc, 
-  updateDoc, 
-  setDoc,
-  serverTimestamp,
-  Firestore,
-  query,
-  limit,
-  where,
-  getDocs,
-  writeBatch
-} from 'firebase/firestore';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import { MOCK_LANDS, MOCK_USERS, generateMockSlots } from '@/lib/mock-data';
 
 interface ParkState {
   lands: ParkingLand[];
   slots: Record<string, ParkingSlot[]>;
   bookings: Booking[];
   availableGuards: UserProfile[];
+  currentUser: UserProfile | null;
   loading: boolean;
   isInitialized: boolean;
   
-  // Real-time Sync
-  initSync: (db: Firestore) => void;
-  
-  // Mutations
-  updateSlotStatus: (db: Firestore, landId: string, slotId: string, status: ParkingSlot['status'], vehicle?: string) => void;
-  createBooking: (db: Firestore, booking: Omit<Booking, 'id'>) => void;
-  addParkingLand: (db: Firestore, ownerId: string, landData: { name: string, totalSlots: number, pricePerHour: number }) => void;
-  seedSampleData: (db: Firestore) => void;
+  // Local Actions
+  login: (role: string) => void;
+  updateSlotStatus: (landId: string, slotId: string, status: ParkingSlot['status'], vehicle?: string) => void;
+  createBooking: (booking: Omit<Booking, 'id'>) => void;
+  addParkingLand: (landData: { name: string, totalSlots: number, pricePerHour: number }) => void;
+  initLocalData: () => void;
 }
 
 export const useParkStore = create<ParkState>((set, get) => ({
@@ -43,137 +27,78 @@ export const useParkStore = create<ParkState>((set, get) => ({
   slots: {},
   bookings: [],
   availableGuards: [],
+  currentUser: null,
   loading: true,
   isInitialized: false,
 
-  initSync: (db) => {
+  initLocalData: () => {
     if (get().isInitialized) return;
 
-    // Sync Lands
-    const landsQuery = query(collection(db, 'parkingLands'), limit(20));
-    onSnapshot(landsQuery, (snapshot) => {
-      const lands = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ParkingLand));
-      set({ lands, loading: false, isInitialized: true });
-
-      // Sync slots for each land
-      lands.forEach(land => {
-        const slotsQuery = collection(db, 'parkingLands', land.id, 'slots');
-        onSnapshot(slotsQuery, (slotSnap) => {
-          const landSlots = slotSnap.docs.map(d => ({ id: d.id, ...d.data() } as ParkingSlot));
-          set(state => ({
-            slots: { ...state.slots, [land.id]: landSlots }
-          }));
-        });
-      });
-    }, (error) => {
-       const permissionError = new FirestorePermissionError({
-          path: 'parkingLands',
-          operation: 'list',
-        });
-        errorEmitter.emit('permission-error', permissionError);
+    const initialSlots: Record<string, ParkingSlot[]> = {};
+    MOCK_LANDS.forEach(land => {
+      initialSlots[land.id] = generateMockSlots(land.id, land.totalSlots);
     });
 
-    // Sync Bookings
-    const bookingsQuery = query(collection(db, 'bookings'), limit(50));
-    onSnapshot(bookingsQuery, (snapshot) => {
-      const bookings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Booking));
-      set({ bookings });
-    });
-
-    // Sync Available Guards - STRICTLY retrieving from Firebase Database
-    const guardsQuery = query(collection(db, 'users'), where('role', '==', 'guard'), limit(50));
-    onSnapshot(guardsQuery, (snapshot) => {
-      const guards = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
-      set({ availableGuards: guards });
+    set({ 
+      lands: MOCK_LANDS, 
+      slots: initialSlots, 
+      availableGuards: MOCK_USERS.filter(u => u.role === 'guard'),
+      loading: false, 
+      isInitialized: true 
     });
   },
 
-  updateSlotStatus: (db, landId, slotId, status, vehicle) => {
-    const slotRef = doc(db, 'parkingLands', landId, 'slots', slotId);
-    const data = {
-      status,
-      currentVehicle: vehicle || null,
-      updatedAt: serverTimestamp()
-    };
+  login: (role) => {
+    const user = MOCK_USERS.find(u => u.role === role) || MOCK_USERS[0];
+    set({ currentUser: user });
+  },
 
-    updateDoc(slotRef, data).catch(async () => {
-      const permissionError = new FirestorePermissionError({
-        path: slotRef.path,
-        operation: 'update',
-        requestResourceData: data,
-      } satisfies SecurityRuleContext);
-      errorEmitter.emit('permission-error', permissionError);
+  updateSlotStatus: (landId, slotId, status, vehicle) => {
+    set(state => {
+      const landSlots = [...(state.slots[landId] || [])];
+      const slotIndex = landSlots.findIndex(s => s.id === slotId);
+      if (slotIndex > -1) {
+        landSlots[slotIndex] = {
+          ...landSlots[slotIndex],
+          status,
+          currentVehicle: vehicle || undefined
+        };
+      }
+      return { slots: { ...state.slots, [landId]: landSlots } };
     });
   },
 
-  createBooking: (db, bookingData) => {
-    const bookingRef = doc(collection(db, 'bookings'));
-    const slotRef = doc(db, 'parkingLands', bookingData.landId, 'slots', bookingData.slotId);
-    
-    const bookingDoc = {
+  createBooking: (bookingData) => {
+    const id = `booking-${Math.random().toString(36).substr(2, 9)}`;
+    const newBooking: Booking = {
       ...bookingData,
-      id: bookingRef.id,
-      createdAt: serverTimestamp()
+      id,
     };
 
-    const slotUpdate = {
-      status: 'booked',
-      bookedBy: bookingData.userId,
-    };
+    set(state => ({
+      bookings: [newBooking, ...state.bookings]
+    }));
 
-    // Use Background writes for speed
-    setDoc(bookingRef, bookingDoc);
-    updateDoc(slotRef, slotUpdate);
+    get().updateSlotStatus(bookingData.landId, bookingData.slotId, 'booked');
   },
 
-  addParkingLand: async (db, ownerId, landData) => {
-    const landRef = doc(collection(db, 'parkingLands'));
-    const landDoc = {
-      id: landRef.id,
-      ownerId: ownerId,
+  addParkingLand: (landData) => {
+    const id = `land-${Math.random().toString(36).substr(2, 9)}`;
+    const newLand: ParkingLand = {
+      id,
+      ownerId: get().currentUser?.uid || 'anonymous',
       name: landData.name,
+      location: { lat: 17.3850, lng: 78.4867 },
       totalSlots: landData.totalSlots,
       pricePerHour: landData.pricePerHour,
-      location: { lat: 17.3850, lng: 78.4867 },
-      image: `https://picsum.photos/seed/${landRef.id}/600/400`,
-      createdAt: serverTimestamp()
+      image: `https://picsum.photos/seed/${id}/600/400`,
     };
 
-    // Use a batch for atomic land and slot creation
-    const batch = writeBatch(db);
-    batch.set(landRef, landDoc);
+    const newSlots = generateMockSlots(id, landData.totalSlots);
 
-    // Initialize slots in the batch
-    for (let i = 0; i < Math.min(landData.totalSlots, 20); i++) { // Limit batch size to 20 for safety
-      const slotId = `slot-${i + 1}`;
-      const slotRef = doc(db, 'parkingLands', landRef.id, 'slots', slotId);
-      batch.set(slotRef, {
-        id: slotId,
-        landId: landRef.id,
-        slotNumber: String.fromCharCode(65 + Math.floor(i / 10)) + (i % 10 + 1),
-        status: 'available'
-      });
-    }
-    
-    await batch.commit();
-  },
-
-  seedSampleData: async (db) => {
-    // Seed some guards to the database
-    const guards = [
-      { uid: 'guard_1', displayName: 'Vikram Security', email: 'vikram@park.com', role: 'guard', phone: '+91 98765 43210' },
-      { uid: 'guard_2', displayName: 'Anjali Shield', email: 'anjali@park.com', role: 'guard', phone: '+91 87654 32109' },
-    ];
-    
-    for (const g of guards) {
-      await setDoc(doc(db, 'users', g.uid), g);
-    }
-
-    // Seed a sample land
-    await get().addParkingLand(db, 'demo_owner', {
-      name: 'Hyderabad Central Mall',
-      totalSlots: 20,
-      pricePerHour: 50
-    });
+    set(state => ({
+      lands: [...state.lands, newLand],
+      slots: { ...state.slots, [id]: newSlots }
+    }));
   }
 }));
