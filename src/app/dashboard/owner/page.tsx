@@ -4,6 +4,7 @@
 import { StatsCards } from "@/components/dashboard/stats-cards";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useParkStore } from "@/hooks/use-park-store";
+import { useFirestore } from "@/firebase";
 import { 
   BarChart, 
   Bar, 
@@ -18,6 +19,8 @@ import {
 } from "recharts";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Database } from "lucide-react";
 
 const data = [
   { name: "Mon", revenue: 4000 },
@@ -30,22 +33,36 @@ const data = [
 ];
 
 export default function OwnerDashboard() {
-  const { lands, slots } = useParkStore();
+  const { lands, slots, seedSampleData } = useParkStore();
+  const db = useFirestore();
   
   const totalRevenue = 12450;
   const totalSlots = Object.values(slots).flat();
   const activeBookings = totalSlots.filter(s => s.status === 'booked').length;
   const availableSlots = totalSlots.filter(s => s.status === 'available').length;
-  const occupancyRate = `${Math.round(((totalSlots.length - availableSlots) / totalSlots.length) * 100)}%`;
+  const totalCount = totalSlots.length || 1;
+  const occupancyRate = `${Math.round(((totalCount - availableSlots) / totalCount) * 100)}%`;
 
   const pieData = [
     { name: 'Available', value: availableSlots, color: '#10b981' },
     { name: 'Booked', value: activeBookings, color: '#f59e0b' },
-    { name: 'Occupied', value: totalSlots.length - availableSlots - activeBookings, color: '#f43f5e' },
+    { name: 'Occupied', value: Math.max(0, totalCount - availableSlots - activeBookings), color: '#f43f5e' },
   ];
 
   return (
     <div className="space-y-8">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold font-headline">Portfolio Overview</h1>
+          <p className="text-muted-foreground">Manage your properties and security personnel.</p>
+        </div>
+        {lands.length === 0 && db && (
+          <Button onClick={() => seedSampleData(db)} className="gap-2" variant="outline">
+            <Database className="h-4 w-4" /> Seed Sample Data
+          </Button>
+        )}
+      </div>
+
       <StatsCards 
         totalRevenue={totalRevenue}
         activeBookings={activeBookings}
@@ -77,7 +94,7 @@ export default function OwnerDashboard() {
         <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle>Occupancy Status</CardTitle>
-            <CardDescription>Live slot distribution</CardDescription>
+            <CardDescription>Live slot distribution across {lands.length} properties</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
@@ -132,20 +149,21 @@ export default function OwnerDashboard() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              <TableRow>
-                <TableCell className="font-medium">Hyderabad Mall</TableCell>
-                <TableCell>A-05</TableCell>
-                <TableCell>Rahul Sharma</TableCell>
-                <TableCell><Badge>Active</Badge></TableCell>
-                <TableCell className="text-right">₹40.00</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className="font-medium">Hitech City Corp</TableCell>
-                <TableCell>C-12</TableCell>
-                <TableCell>Priya Varma</TableCell>
-                <TableCell><Badge variant="outline">Completed</Badge></TableCell>
-                <TableCell className="text-right">₹90.00</TableCell>
-              </TableRow>
+              {lands.length > 0 ? (
+                <TableRow>
+                  <TableCell className="font-medium">{lands[0].name}</TableCell>
+                  <TableCell>A-05</TableCell>
+                  <TableCell>Rahul Sharma</TableCell>
+                  <TableCell><Badge>Active</Badge></TableCell>
+                  <TableCell className="text-right">₹40.00</TableCell>
+                </TableRow>
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-10 text-muted-foreground italic">
+                    No recent activities recorded. Seed data to begin.
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>

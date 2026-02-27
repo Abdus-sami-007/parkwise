@@ -13,7 +13,8 @@ import {
   Firestore,
   query,
   limit,
-  where
+  where,
+  getDocs
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
@@ -33,6 +34,7 @@ interface ParkState {
   updateSlotStatus: (db: Firestore, landId: string, slotId: string, status: ParkingSlot['status'], vehicle?: string) => void;
   createBooking: (db: Firestore, booking: Omit<Booking, 'id'>) => void;
   addParkingLand: (db: Firestore, ownerId: string, landData: { name: string, totalSlots: number, pricePerHour: number }) => void;
+  seedSampleData: (db: Firestore) => void;
 }
 
 export const useParkStore = create<ParkState>((set, get) => ({
@@ -171,6 +173,34 @@ export const useParkStore = create<ParkState>((set, get) => ({
         status: 'available'
       };
       setDoc(slotRef, slotData);
+    }
+  },
+
+  seedSampleData: async (db) => {
+    // Seed some guards if none exist
+    const guardsSnapshot = await getDocs(query(collection(db, 'users'), where('role', '==', 'guard'), limit(1)));
+    if (guardsSnapshot.empty) {
+      const sampleGuards = [
+        { uid: 'guard_1', displayName: 'Vikram Singh', email: 'vikram@guards.com', role: 'guard', phone: '+91 98765 43210' },
+        { uid: 'guard_2', displayName: 'Anjali Sharma', email: 'anjali@guards.com', role: 'guard', phone: '+91 87654 32109' },
+        { uid: 'guard_3', displayName: 'Rahul Verma', email: 'rahul@guards.com', role: 'guard', phone: '+91 76543 21098' },
+      ];
+      sampleGuards.forEach(g => setDoc(doc(db, 'users', g.uid), g));
+    }
+
+    // Seed a sample land if none exist
+    const landsSnapshot = await getDocs(query(collection(db, 'parkingLands'), limit(1)));
+    if (landsSnapshot.empty) {
+      get().addParkingLand(db, 'demo_owner', {
+        name: 'Hyderabad Central Mall',
+        totalSlots: 40,
+        pricePerHour: 50
+      });
+      get().addParkingLand(db, 'demo_owner', {
+        name: 'Hitech City Square',
+        totalSlots: 20,
+        pricePerHour: 40
+      });
     }
   }
 }));
