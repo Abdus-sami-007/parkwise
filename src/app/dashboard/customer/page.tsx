@@ -14,7 +14,6 @@ import {
   DialogContent, 
   DialogHeader, 
   DialogTitle, 
-  DialogFooter,
   DialogDescription
 } from "@/components/ui/dialog";
 import { SlotGrid } from "@/components/dashboard/slot-grid";
@@ -40,7 +39,7 @@ export default function CustomerDashboard() {
     if (currentUser && selectedLand && selectedSlot) {
       setIsBooking(true);
       
-      // Artificial delay for realism
+      // Artificial delay for realism in the prototype
       setTimeout(() => {
         createBooking({
           userId: currentUser.uid,
@@ -68,7 +67,7 @@ export default function CustomerDashboard() {
     <div className="space-y-8">
       <div className="relative h-[240px] rounded-3xl overflow-hidden shadow-2xl">
         <Image 
-          src="https://picsum.photos/seed/parking-hero-new/1200/400" 
+          src="https://picsum.photos/seed/parking-hero-refine/1200/400" 
           alt="Banner" 
           fill 
           className="object-cover brightness-50"
@@ -90,7 +89,7 @@ export default function CustomerDashboard() {
 
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-black font-headline tracking-tight">Nearby Locations</h2>
+          <h2 className="text-2xl font-black font-headline tracking-tight text-foreground">Nearby Locations</h2>
           <p className="text-muted-foreground text-sm">Real-time availability in your area</p>
         </div>
         <Badge variant="secondary" className="gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary border-none">
@@ -136,7 +135,7 @@ export default function CustomerDashboard() {
               </CardContent>
               <CardFooter>
                 <Button 
-                  className="w-full rounded-2xl font-bold py-6 text-lg shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-shadow" 
+                  className="w-full rounded-2xl font-bold py-6 text-lg shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all" 
                   onClick={() => setSelectedLand(land)}
                   disabled={availableCount === 0}
                 >
@@ -193,7 +192,7 @@ export default function CustomerDashboard() {
             <Alert className="border-none bg-primary/10 rounded-2xl">
               <Info className="h-5 w-5 text-primary" />
               <AlertDescription className="text-xs font-bold text-primary">
-                Your reservation is held for 15 minutes. Show the QR code on arrival.
+                Your reservation is held for 15 minutes. Show the digital ticket on arrival.
               </AlertDescription>
             </Alert>
 

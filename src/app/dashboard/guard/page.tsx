@@ -17,18 +17,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Zap, CarFront, Loader2, RefreshCcw } from "lucide-react";
+import { Zap, CarFront, Loader2, RefreshCcw, Info } from "lucide-react";
 import { guardAssistantRecommendations } from "@/ai/flows/guard-assistant-recommendations-flow";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 export default function GuardDashboard() {
   const { lands, slots, updateSlotStatus } = useParkStore();
+  const { toast } = useToast();
+  
   const [selectedLandId, setSelectedLandId] = useState<string>(lands[0]?.id || "");
   const [selectedSlot, setSelectedSlot] = useState<ParkingSlot | null>(null);
   const [vehiclePlate, setVehiclePlate] = useState("");
   const [recommendations, setRecommendations] = useState<string[]>([]);
   const [loadingAI, setLoadingAI] = useState(false);
+  const [isAiOffline, setIsAiOffline] = useState(false);
 
   const currentSlots = slots[selectedLandId] || [];
 
@@ -41,12 +45,16 @@ export default function GuardDashboard() {
     if (selectedSlot) {
       updateSlotStatus(selectedLandId, selectedSlot.id, status, status === 'occupied' ? vehiclePlate : undefined);
       setSelectedSlot(null);
+      // Trigger a quick re-analysis
+      getAIRecommendations();
     }
   };
 
   const getAIRecommendations = async () => {
     if (!selectedLandId) return;
     setLoadingAI(true);
+    setIsAiOffline(false);
+    
     try {
       const result = await guardAssistantRecommendations({
         parkingLandId: selectedLandId,
@@ -55,11 +63,28 @@ export default function GuardDashboard() {
           slotNumber: s.slotNumber,
           bookedBy: s.bookedBy || 'User'
         })),
-        recentEvents: "Manual status updates in progress. Peak hour approaching."
+        recentEvents: "Manual status updates in progress."
       });
       setRecommendations(result.recommendations);
-    } catch (error) {
-      console.error("AI failed", error);
+    } catch (error: any) {
+      console.error("AI Assistant unreachable, switching to system logic", error);
+      setIsAiOffline(true);
+      
+      // Fallback: Use simple rule-based recommendations if AI quota is hit
+      const occupied = currentSlots.filter(s => s.status === 'occupied').length;
+      const booked = currentSlots.filter(s => s.status === 'booked').length;
+      
+      const systemRecs = [
+        `Monitor entry: ${booked} upcoming arrivals expected.`,
+        occupied > (currentSlots.length * 0.8) ? "High occupancy alert: Direct traffic to overflow." : "Flow is steady: No immediate congestion.",
+        "System Log: Ensure all logged plates are verified on exit."
+      ];
+      setRecommendations(systemRecs);
+      
+      toast({
+        title: "AI Assistant Offline",
+        description: "Quota reached or network error. Using local system logic.",
+      });
     } finally {
       setLoadingAI(false);
     }
@@ -116,8 +141,10 @@ export default function GuardDashboard() {
         {recommendations.slice(0, 3).map((rec, i) => (
           <Alert key={i} className="bg-card border-none shadow-xl flex flex-col justify-center gap-2 p-5 rounded-2xl group hover:scale-[1.02] transition-transform">
             <div className="flex items-center gap-2">
-              <Zap className="h-4 w-4 text-amber-500 fill-amber-500" />
-              <AlertTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">AI Intelligence</AlertTitle>
+              <Zap className={cn("h-4 w-4", isAiOffline ? "text-primary" : "text-amber-500 fill-amber-500")} />
+              <AlertTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                {isAiOffline ? "System Alert" : "AI Intelligence"}
+              </AlertTitle>
             </div>
             <AlertDescription className="text-sm font-bold leading-tight line-clamp-2">
               {rec}
@@ -152,10 +179,18 @@ export default function GuardDashboard() {
         <DialogContent className="border-none shadow-3xl rounded-3xl p-0 overflow-hidden max-w-md">
           <div className="bg-slate-900 p-8 text-white">
             <div className="flex items-center justify-between mb-2">
-              <Badge className="bg-primary/20 text-primary border-none font-black px-3 py-1">SLOT {selectedSlot?.slotNumber}</Badge>
+              <Badge className="bg-primary/20 text-primary border-none font-black px-3 py-1">
+                SLOT {selectedSlot?.slotNumber}
+              </Badge>
               <div className="flex gap-1">
-                <div className={cn("w-2 h-2 rounded-full", selectedSlot?.status === 'available' ? 'bg-emerald-500' : selectedSlot?.status === 'booked' ? 'bg-amber-500' : 'bg-rose-500')} />
-                <span className="text-[10px] uppercase font-bold tracking-widest opacity-60">{selectedSlot?.status}</span>
+                <div className={cn(
+                  "w-2 h-2 rounded-full", 
+                  selectedSlot?.status === 'available' ? 'bg-emerald-500' : 
+                  selectedSlot?.status === 'booked' ? 'bg-amber-500' : 'bg-rose-500'
+                )} />
+                <span className="text-[10px] uppercase font-bold tracking-widest opacity-60">
+                  {selectedSlot?.status}
+                </span>
               </div>
             </div>
             <h2 className="text-3xl font-black">Vehicle Logging</h2>
