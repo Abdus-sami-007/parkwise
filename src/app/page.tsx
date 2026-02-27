@@ -4,7 +4,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
-import { MapPin, ShieldCheck, LayoutDashboard, ParkingCircle, ArrowRight, CheckCircle2, UserCircle } from "lucide-react";
+import { ShieldCheck, LayoutDashboard, ParkingCircle, ArrowRight, CheckCircle2, UserCircle } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function Home() {
@@ -89,7 +89,7 @@ export default function Home() {
               <div className="p-6 pt-0 mt-auto">
                 <Button 
                   className="w-full h-12 text-lg font-bold rounded-xl gap-2" 
-                  onClick={() => router.push(role.path)}
+                  onClick={() => router.push(`/login?role=${role.title.split(' ')[0].toLowerCase()}`)}
                 >
                   Enter as {role.title.split(' ')[0]} <ArrowRight className="h-5 w-5" />
                 </Button>
@@ -98,7 +98,6 @@ export default function Home() {
           ))}
         </div>
 
-        {/* Feature Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 w-full border-t pt-16 mt-8">
           {[
             { title: "24/7 Security", desc: "Live monitoring and AI suggestions" },

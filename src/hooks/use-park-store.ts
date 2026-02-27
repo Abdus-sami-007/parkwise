@@ -14,7 +14,8 @@ import {
   query,
   limit,
   where,
-  getDocs
+  getDocs,
+  writeBatch
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
@@ -79,7 +80,7 @@ export const useParkStore = create<ParkState>((set, get) => ({
       set({ bookings });
     });
 
-    // Sync Available Guards (All users with role 'guard')
+    // Sync Available Guards - STRICTLY retrieving from Firebase Database
     const guardsQuery = query(collection(db, 'users'), where('role', '==', 'guard'), limit(50));
     onSnapshot(guardsQuery, (snapshot) => {
       const guards = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
@@ -118,29 +119,14 @@ export const useParkStore = create<ParkState>((set, get) => ({
     const slotUpdate = {
       status: 'booked',
       bookedBy: bookingData.userId,
-      currentBookingId: bookingRef.id
     };
 
-    setDoc(bookingRef, bookingDoc).catch(async () => {
-      const permissionError = new FirestorePermissionError({
-        path: bookingRef.path,
-        operation: 'create',
-        requestResourceData: bookingDoc,
-      } satisfies SecurityRuleContext);
-      errorEmitter.emit('permission-error', permissionError);
-    });
-
-    updateDoc(slotRef, slotUpdate).catch(async () => {
-      const permissionError = new FirestorePermissionError({
-        path: slotRef.path,
-        operation: 'update',
-        requestResourceData: slotUpdate,
-      } satisfies SecurityRuleContext);
-      errorEmitter.emit('permission-error', permissionError);
-    });
+    // Use Background writes for speed
+    setDoc(bookingRef, bookingDoc);
+    updateDoc(slotRef, slotUpdate);
   },
 
-  addParkingLand: (db, ownerId, landData) => {
+  addParkingLand: async (db, ownerId, landData) => {
     const landRef = doc(collection(db, 'parkingLands'));
     const landDoc = {
       id: landRef.id,
@@ -148,59 +134,46 @@ export const useParkStore = create<ParkState>((set, get) => ({
       name: landData.name,
       totalSlots: landData.totalSlots,
       pricePerHour: landData.pricePerHour,
-      location: { lat: 17.3850, lng: 78.4867 }, // Default Hyderabad
+      location: { lat: 17.3850, lng: 78.4867 },
       image: `https://picsum.photos/seed/${landRef.id}/600/400`,
       createdAt: serverTimestamp()
     };
 
-    setDoc(landRef, landDoc).catch(async () => {
-      const permissionError = new FirestorePermissionError({
-        path: landRef.path,
-        operation: 'create',
-        requestResourceData: landDoc,
-      } satisfies SecurityRuleContext);
-      errorEmitter.emit('permission-error', permissionError);
-    });
+    // Use a batch for atomic land and slot creation
+    const batch = writeBatch(db);
+    batch.set(landRef, landDoc);
 
-    // Initialize slots
-    for (let i = 0; i < landData.totalSlots; i++) {
+    // Initialize slots in the batch
+    for (let i = 0; i < Math.min(landData.totalSlots, 20); i++) { // Limit batch size to 20 for safety
       const slotId = `slot-${i + 1}`;
       const slotRef = doc(db, 'parkingLands', landRef.id, 'slots', slotId);
-      const slotData = {
+      batch.set(slotRef, {
         id: slotId,
         landId: landRef.id,
         slotNumber: String.fromCharCode(65 + Math.floor(i / 10)) + (i % 10 + 1),
         status: 'available'
-      };
-      setDoc(slotRef, slotData);
+      });
     }
+    
+    await batch.commit();
   },
 
   seedSampleData: async (db) => {
-    // Seed some guards if none exist
-    const guardsSnapshot = await getDocs(query(collection(db, 'users'), where('role', '==', 'guard'), limit(1)));
-    if (guardsSnapshot.empty) {
-      const sampleGuards = [
-        { uid: 'guard_1', displayName: 'Vikram Singh', email: 'vikram@guards.com', role: 'guard', phone: '+91 98765 43210' },
-        { uid: 'guard_2', displayName: 'Anjali Sharma', email: 'anjali@guards.com', role: 'guard', phone: '+91 87654 32109' },
-        { uid: 'guard_3', displayName: 'Rahul Verma', email: 'rahul@guards.com', role: 'guard', phone: '+91 76543 21098' },
-      ];
-      sampleGuards.forEach(g => setDoc(doc(db, 'users', g.uid), g));
+    // Seed some guards to the database
+    const guards = [
+      { uid: 'guard_1', displayName: 'Vikram Security', email: 'vikram@park.com', role: 'guard', phone: '+91 98765 43210' },
+      { uid: 'guard_2', displayName: 'Anjali Shield', email: 'anjali@park.com', role: 'guard', phone: '+91 87654 32109' },
+    ];
+    
+    for (const g of guards) {
+      await setDoc(doc(db, 'users', g.uid), g);
     }
 
-    // Seed a sample land if none exist
-    const landsSnapshot = await getDocs(query(collection(db, 'parkingLands'), limit(1)));
-    if (landsSnapshot.empty) {
-      get().addParkingLand(db, 'demo_owner', {
-        name: 'Hyderabad Central Mall',
-        totalSlots: 40,
-        pricePerHour: 50
-      });
-      get().addParkingLand(db, 'demo_owner', {
-        name: 'Hitech City Square',
-        totalSlots: 20,
-        pricePerHour: 40
-      });
-    }
+    // Seed a sample land
+    await get().addParkingLand(db, 'demo_owner', {
+      name: 'Hyderabad Central Mall',
+      totalSlots: 20,
+      pricePerHour: 50
+    });
   }
 }));
