@@ -4,7 +4,6 @@
 import { StatsCards } from "@/components/dashboard/stats-cards";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useParkStore } from "@/hooks/use-park-store";
-import { useFirestore } from "@/firebase";
 import { 
   BarChart, 
   Bar, 
@@ -20,7 +19,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Database } from "lucide-react";
+import { Database, Plus } from "lucide-react";
+import Link from "next/link";
 
 const data = [
   { name: "Mon", revenue: 4000 },
@@ -34,7 +34,6 @@ const data = [
 
 export default function OwnerDashboard() {
   const { lands, slots, seedSampleData } = useParkStore();
-  const db = useFirestore();
   
   const totalRevenue = 12450;
   const totalSlots = Object.values(slots).flat();
@@ -53,14 +52,19 @@ export default function OwnerDashboard() {
     <div className="space-y-8">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold font-headline">Portfolio Overview</h1>
-          <p className="text-muted-foreground">Manage your properties and security personnel.</p>
+          <h1 className="text-3xl font-bold font-headline">Owner Portfolio</h1>
+          <p className="text-muted-foreground">Managing {lands.length} parking properties.</p>
         </div>
-        {lands.length === 0 && db && (
-          <Button onClick={() => seedSampleData(db)} className="gap-2" variant="outline">
-            <Database className="h-4 w-4" /> Seed Sample Data
+        <div className="flex gap-2">
+          <Button onClick={seedSampleData} variant="outline" className="gap-2">
+            <Database className="h-4 w-4" /> Reset Data
           </Button>
-        )}
+          <Button asChild className="gap-2">
+            <Link href="/dashboard/owner/lands">
+              <Plus className="h-4 w-4" /> Add Land
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <StatsCards 
@@ -73,8 +77,8 @@ export default function OwnerDashboard() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="lg:col-span-4">
           <CardHeader>
-            <CardTitle>Revenue Overview</CardTitle>
-            <CardDescription>Daily earnings for current week</CardDescription>
+            <CardTitle>Revenue Insights</CardTitle>
+            <CardDescription>Daily performance overview</CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
             <div className="h-[300px]">
@@ -93,11 +97,11 @@ export default function OwnerDashboard() {
 
         <Card className="lg:col-span-3">
           <CardHeader>
-            <CardTitle>Occupancy Status</CardTitle>
-            <CardDescription>Live slot distribution across {lands.length} properties</CardDescription>
+            <CardTitle>Global Occupancy</CardTitle>
+            <CardDescription>Slot distribution across all lands</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px]">
+            <div className="h-[250px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -117,14 +121,11 @@ export default function OwnerDashboard() {
                 </PieChart>
               </ResponsiveContainer>
             </div>
-            <div className="mt-4 space-y-2">
+            <div className="mt-4 grid grid-cols-3 gap-2">
               {pieData.map((item) => (
-                <div key={item.name} className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                    <span>{item.name}</span>
-                  </div>
-                  <span className="font-bold">{item.value}</span>
+                <div key={item.name} className="text-center p-2 bg-muted rounded-lg">
+                  <div className="text-[10px] text-muted-foreground uppercase font-bold">{item.name}</div>
+                  <div className="text-lg font-bold" style={{ color: item.color }}>{item.value}</div>
                 </div>
               ))}
             </div>
@@ -134,36 +135,43 @@ export default function OwnerDashboard() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
-          <CardDescription>Latest bookings and slot updates</CardDescription>
+          <CardTitle>Property Status</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Location</TableHead>
-                <TableHead>Slot</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
+                <TableHead>Total Slots</TableHead>
+                <TableHead>Occupancy</TableHead>
+                <TableHead>Rate</TableHead>
+                <TableHead className="text-right">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {lands.length > 0 ? (
-                <TableRow>
-                  <TableCell className="font-medium">{lands[0].name}</TableCell>
-                  <TableCell>A-05</TableCell>
-                  <TableCell>Rahul Sharma</TableCell>
-                  <TableCell><Badge>Active</Badge></TableCell>
-                  <TableCell className="text-right">₹40.00</TableCell>
-                </TableRow>
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-10 text-muted-foreground italic">
-                    No recent activities recorded. Seed data to begin.
-                  </TableCell>
-                </TableRow>
-              )}
+              {lands.map((land) => {
+                const landSlots = slots[land.id] || [];
+                const occupiedCount = landSlots.filter(s => s.status !== 'available').length;
+                const percent = Math.round((occupiedCount / land.totalSlots) * 100);
+                return (
+                  <TableRow key={land.id}>
+                    <TableCell className="font-medium">{land.name}</TableCell>
+                    <TableCell>{land.totalSlots}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
+                          <div className="h-full bg-primary" style={{ width: `${percent}%` }} />
+                        </div>
+                        <span className="text-xs font-bold">{percent}%</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>₹{land.pricePerHour}/hr</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="sm">Manage</Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>

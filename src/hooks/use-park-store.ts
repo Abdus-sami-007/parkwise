@@ -15,9 +15,11 @@ interface ParkState {
   
   // Actions
   login: (role: string, email?: string, name?: string) => void;
+  logout: () => void;
   updateSlotStatus: (landId: string, slotId: string, status: ParkingSlot['status'], vehicle?: string) => void;
   createBooking: (bookingData: Omit<Booking, 'id'>) => void;
   addParkingLand: (landData: { name: string, totalSlots: number, pricePerHour: number }) => void;
+  recruitGuard: (guardId: string) => void;
   seedSampleData: () => void;
 }
 
@@ -52,6 +54,8 @@ export const useParkStore = create<ParkState>((set, get) => ({
     };
     set({ currentUser: user });
   },
+
+  logout: () => set({ currentUser: null }),
 
   updateSlotStatus: (landId, slotId, status, vehicle) => {
     set(state => {
@@ -99,6 +103,14 @@ export const useParkStore = create<ParkState>((set, get) => ({
     set(state => ({
       lands: [...state.lands, newLand],
       slots: { ...state.slots, [id]: newSlots }
+    }));
+  },
+
+  recruitGuard: (guardId) => {
+    set(state => ({
+      availableGuards: state.availableGuards.map(g => 
+        g.uid === guardId ? { ...g, recruited: true } : g
+      )
     }));
   }
 }));

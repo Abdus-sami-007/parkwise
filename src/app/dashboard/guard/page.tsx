@@ -18,8 +18,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ShieldCheck, Zap, AlertCircle } from "lucide-react";
-import { guardAssistantRecommendations, GuardAssistantRecommendationsOutput } from "@/ai/flows/guard-assistant-recommendations-flow";
+import { Zap, ShieldAlert, CarFront } from "lucide-react";
+import { guardAssistantRecommendations } from "@/ai/flows/guard-assistant-recommendations-flow";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 export default function GuardDashboard() {
@@ -45,6 +45,7 @@ export default function GuardDashboard() {
   };
 
   const getAIRecommendations = async () => {
+    if (!selectedLandId) return;
     setLoadingAI(true);
     try {
       const result = await guardAssistantRecommendations({
@@ -52,13 +53,13 @@ export default function GuardDashboard() {
         currentSlotStatuses: currentSlots.map(s => ({ slotNumber: s.slotNumber, status: s.status })),
         activeBookings: currentSlots.filter(s => s.status === 'booked').map(s => ({
           slotNumber: s.slotNumber,
-          bookedBy: s.bookedBy || 'Unknown User'
+          bookedBy: s.bookedBy || 'User'
         })),
-        recentEvents: "Morning rush starting. High turnover in Section A. One vehicle reported sensor malfunction in B5."
+        recentEvents: "Manual status updates in progress."
       });
       setRecommendations(result.recommendations);
     } catch (error) {
-      console.error("AI recommendation failed", error);
+      console.error("AI failed", error);
     } finally {
       setLoadingAI(false);
     }
@@ -74,14 +75,14 @@ export default function GuardDashboard() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold font-headline">Live Patrol</h1>
-          <p className="text-muted-foreground">Monitor and manage real-time occupancy</p>
+          <h1 className="text-3xl font-bold font-headline">Guard Patrol</h1>
+          <p className="text-muted-foreground">Monitoring active traffic and occupancy</p>
         </div>
         <div className="flex items-center gap-3">
-          <Label htmlFor="land-select">Assigned Land:</Label>
+          <Label>Property:</Label>
           <Select value={selectedLandId} onValueChange={setSelectedLandId}>
-            <SelectTrigger id="land-select" className="w-[280px]">
-              <SelectValue placeholder="Select property" />
+            <SelectTrigger className="w-[240px]">
+              <SelectValue placeholder="Select land" />
             </SelectTrigger>
             <SelectContent>
               {lands.map((land) => (
@@ -92,71 +93,54 @@ export default function GuardDashboard() {
         </div>
       </div>
 
-      {recommendations.length > 0 && (
-        <div className="grid gap-3 md:grid-cols-3">
-          {recommendations.map((rec, i) => (
-            <Alert key={i} className="bg-primary/5 border-primary/20">
-              <Zap className="h-4 w-4 text-primary" />
-              <AlertTitle className="text-xs uppercase tracking-wider font-bold">AI Suggestion</AlertTitle>
-              <AlertDescription className="text-sm font-medium">
-                {rec}
-              </AlertDescription>
-            </Alert>
-          ))}
-        </div>
-      )}
-
-      <div className="grid gap-6 md:grid-cols-4">
-        <Card className="md:col-span-3">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Slot Management</CardTitle>
-                <CardDescription>Click a slot to update status</CardDescription>
-              </div>
-              <div className="flex gap-4 text-xs font-medium">
-                <div className="flex items-center gap-1"><div className="w-3 h-3 rounded-full bg-emerald-500" /> Available</div>
-                <div className="flex items-center gap-1"><div className="w-3 h-3 rounded-full bg-amber-500" /> Booked</div>
-                <div className="flex items-center gap-1"><div className="w-3 h-3 rounded-full bg-rose-500" /> Occupied</div>
-              </div>
-            </div>
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="bg-primary/5 border-primary/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs font-bold uppercase text-primary">Live Stats</CardTitle>
           </CardHeader>
-          <CardContent>
-            <SlotGrid slots={currentSlots} onSlotClick={handleSlotClick} />
+          <CardContent className="flex justify-between items-center">
+            <div>
+              <div className="text-2xl font-bold">{currentSlots.filter(s => s.status === 'available').length}</div>
+              <p className="text-[10px] text-muted-foreground">Available Slots</p>
+            </div>
+            <div>
+              <div className="text-2xl font-bold">{currentSlots.filter(s => s.status === 'occupied').length}</div>
+              <p className="text-[10px] text-muted-foreground">Vehicles Parked</p>
+            </div>
           </CardContent>
         </Card>
-
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground">Total Slots</span>
-                <span className="font-bold">{currentSlots.length}</span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground">Available</span>
-                <span className="font-bold text-emerald-600">{currentSlots.filter(s => s.status === 'available').length}</span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground">Occupied</span>
-                <span className="font-bold text-rose-600">{currentSlots.filter(s => s.status === 'occupied').length}</span>
-              </div>
-              <Button onClick={getAIRecommendations} variant="outline" className="w-full gap-2" disabled={loadingAI}>
-                <Zap className={loadingAI ? "animate-pulse" : ""} /> Refresh AI Insights
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+        
+        {recommendations.slice(0, 2).map((rec, i) => (
+          <Alert key={i} className="bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800">
+            <Zap className="h-4 w-4 text-amber-600" />
+            <AlertTitle className="text-xs font-bold uppercase text-amber-600">AI Alert</AlertTitle>
+            <AlertDescription className="text-sm font-medium leading-tight">{rec}</AlertDescription>
+          </Alert>
+        ))}
       </div>
 
+      <Card className="border-none shadow-xl">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Interactive Map</CardTitle>
+            <CardDescription>Click a slot to check-in or update status</CardDescription>
+          </div>
+          <Button size="sm" variant="outline" onClick={getAIRecommendations} disabled={loadingAI}>
+            {loadingAI ? "Analyzing..." : "Refresh Insights"}
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <SlotGrid slots={currentSlots} onSlotClick={handleSlotClick} />
+        </CardContent>
+      </Card>
+
       <Dialog open={!!selectedSlot} onOpenChange={() => setSelectedSlot(null)}>
-        <DialogContent>
+        <DialogContent className="border-none">
           <DialogHeader>
-            <DialogTitle>Update Slot {selectedSlot?.slotNumber}</DialogTitle>
-            <DialogDescription>Manually update slot status or check-in vehicle.</DialogDescription>
+            <DialogTitle className="text-2xl flex items-center gap-2">
+              <CarFront className="h-6 w-6 text-primary" /> Slot {selectedSlot?.slotNumber}
+            </DialogTitle>
+            <DialogDescription>Quick update for parking status</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -171,29 +155,26 @@ export default function GuardDashboard() {
               <Button 
                 variant={selectedSlot?.status === 'available' ? 'default' : 'outline'}
                 onClick={() => handleUpdateStatus('available')}
-                className="bg-emerald-500 hover:bg-emerald-600 border-none"
+                className="bg-emerald-500 hover:bg-emerald-600 text-white"
               >
-                Available
+                Clear
               </Button>
               <Button 
                 variant={selectedSlot?.status === 'booked' ? 'default' : 'outline'}
                 onClick={() => handleUpdateStatus('booked')}
-                className="bg-amber-500 hover:bg-amber-600 border-none"
+                className="bg-amber-500 hover:bg-amber-600 text-white"
               >
-                Booked
+                Reserved
               </Button>
               <Button 
                 variant={selectedSlot?.status === 'occupied' ? 'default' : 'outline'}
                 onClick={() => handleUpdateStatus('occupied')}
-                className="bg-rose-500 hover:bg-rose-600 border-none"
+                className="bg-rose-500 hover:bg-rose-600 text-white"
               >
-                Occupied
+                Parked
               </Button>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setSelectedSlot(null)}>Cancel</Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

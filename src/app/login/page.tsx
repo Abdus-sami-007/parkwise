@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ParkingCircle, LogIn, Home, User } from "lucide-react";
+import { ParkingCircle, ArrowRight, Home, User } from "lucide-react";
 import { useParkStore } from "@/hooks/use-park-store";
 import Link from "next/link";
 
@@ -21,55 +21,49 @@ export default function LoginPage() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // Simple entry: no database verification
     login(requestedRole, identifier || `${requestedRole}@example.com`, identifier || requestedRole);
     router.replace(`/dashboard/${requestedRole}`);
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 space-y-4">
-      <div className="w-full max-w-md flex justify-start">
-        <Button variant="ghost" asChild className="gap-2 -ml-2">
-          <Link href="/">
-            <Home className="h-4 w-4" /> Back to Home
-          </Link>
-        </Button>
-      </div>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 space-y-6">
+      <Button variant="ghost" asChild className="gap-2 self-start md:absolute md:top-8 md:left-8">
+        <Link href="/">
+          <Home className="h-4 w-4" /> Back to Home
+        </Link>
+      </Button>
       
       <Card className="w-full max-w-md shadow-2xl border-none">
-        <CardHeader className="space-y-1 text-center">
-          <div className="flex justify-center mb-4">
-            <div className="bg-primary p-3 rounded-2xl shadow-lg shadow-primary/20">
-              <ParkingCircle className="h-8 w-8 text-white" />
-            </div>
+        <CardHeader className="text-center">
+          <div className="mx-auto bg-primary p-4 rounded-3xl shadow-xl shadow-primary/20 mb-6">
+            <ParkingCircle className="h-10 w-10 text-white" />
           </div>
-          <CardTitle className="text-3xl font-bold font-headline">Welcome Back</CardTitle>
+          <CardTitle className="text-3xl font-black font-headline tracking-tight">System Entry</CardTitle>
           <CardDescription>Enter as a {requestedRole}</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="identifier">Email or Username</Label>
+              <Label>Email or Username</Label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input 
-                  id="identifier" 
-                  className="pl-10" 
-                  placeholder="Enter anything to enter..." 
+                  className="pl-10 h-12" 
+                  placeholder="e.g. demo_user" 
                   value={identifier} 
                   onChange={(e) => setIdentifier(e.target.value)} 
                   required 
                 />
               </div>
             </div>
-            <Button type="submit" className="w-full h-11 text-lg font-bold gap-2">
-              <LogIn className="h-5 w-5" /> Enter Dashboard
+            <Button type="submit" className="w-full h-12 text-lg font-bold rounded-xl shadow-lg">
+              Enter Dashboard <ArrowRight className="h-5 w-5 ml-2" />
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="text-center">
-          <p className="text-sm text-muted-foreground w-full">
-            Want a new profile? <Link href="/signup" className="text-primary font-bold hover:underline">Join now</Link>
+        <CardFooter className="justify-center">
+          <p className="text-sm text-muted-foreground">
+            No password required for prototype access.
           </p>
         </CardFooter>
       </Card>

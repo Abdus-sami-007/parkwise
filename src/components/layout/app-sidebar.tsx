@@ -21,7 +21,8 @@ import {
   ShieldCheck, 
   BarChart3,
   ParkingCircle,
-  Users
+  Users,
+  Settings
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -38,20 +39,20 @@ export function AppSidebar() {
     switch (role) {
       case 'owner':
         return [
-          { title: "Overview", icon: LayoutDashboard, url: "/dashboard/owner" },
-          { title: "My Lands", icon: MapIcon, url: "/dashboard/owner/lands" },
+          { title: "Dashboard", icon: LayoutDashboard, url: "/dashboard/owner" },
+          { title: "Manage Lands", icon: MapIcon, url: "/dashboard/owner/lands" },
           { title: "Analytics", icon: BarChart3, url: "/dashboard/owner/analytics" },
-          { title: "Guards", icon: Users, url: "/dashboard/owner/guards" },
+          { title: "Recruit Guards", icon: Users, url: "/dashboard/owner/guards" },
         ];
       case 'guard':
         return [
-          { title: "Live Map", icon: MapIcon, url: "/dashboard/guard" },
-          { title: "Check-in/Out", icon: ShieldCheck, url: "/dashboard/guard/patrol" },
-          { title: "Reports", icon: BarChart3, url: "/dashboard/guard/reports" },
+          { title: "Live Patrol", icon: MapIcon, url: "/dashboard/guard" },
+          { title: "Check-in", icon: ShieldCheck, url: "/dashboard/guard/patrol" },
+          { title: "Logs", icon: BarChart3, url: "/dashboard/guard/reports" },
         ];
       case 'customer':
         return [
-          { title: "Explore", icon: MapIcon, url: "/dashboard/customer" },
+          { title: "Find Parking", icon: MapIcon, url: "/dashboard/customer" },
           { title: "My Bookings", icon: History, url: "/dashboard/customer/bookings" },
           { title: "Payments", icon: CreditCard, url: "/dashboard/customer/payments" },
         ];
@@ -70,23 +71,22 @@ export function AppSidebar() {
             <div className="flex items-center justify-between p-2">
               <SidebarMenuButton size="lg" asChild>
                 <Link href="/">
-                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                    <ParkingCircle className="size-4" />
+                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-lg">
+                    <ParkingCircle className="size-5" />
                   </div>
                   <div className="flex flex-col gap-0.5 leading-none">
-                    <span className="font-semibold font-headline">ParkWise</span>
-                    <span className="text-xs text-muted-foreground">Smart Systems</span>
+                    <span className="font-bold font-headline">ParkWise</span>
+                    <span className="text-[10px] text-muted-foreground uppercase font-black">{role} Portal</span>
                   </div>
                 </Link>
               </SidebarMenuButton>
-              <ThemeToggle />
             </div>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel className="px-4 text-[10px] font-bold uppercase tracking-widest opacity-50">Menu</SidebarGroupLabel>
           <SidebarMenu>
             {menuItems.map((item) => (
               <SidebarMenuItem key={item.title}>
@@ -94,10 +94,11 @@ export function AppSidebar() {
                   asChild 
                   isActive={pathname === item.url}
                   tooltip={item.title}
+                  className="rounded-xl mx-2"
                 >
                   <Link href={item.url}>
-                    <item.icon />
-                    <span>{item.title}</span>
+                    <item.icon className="size-4" />
+                    <span className="font-medium">{item.title}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -106,7 +107,9 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <NavUser />
+        <div className="p-2">
+          <NavUser />
+        </div>
       </SidebarFooter>
     </Sidebar>
   );
