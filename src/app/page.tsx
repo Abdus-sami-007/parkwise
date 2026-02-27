@@ -12,6 +12,7 @@ export default function Home() {
 
   const roles = [
     {
+      role: "owner",
       title: "Property Owner",
       description: "Manage your parking lands, track revenue, and recruit guards.",
       icon: LayoutDashboard,
@@ -21,6 +22,7 @@ export default function Home() {
       features: ["Add Parking Lands", "View Analytics", "Recruit Guards"]
     },
     {
+      role: "guard",
       title: "Security Guard",
       description: "Live patrol, automated check-in/out, and duty reporting.",
       icon: ShieldCheck,
@@ -30,6 +32,7 @@ export default function Home() {
       features: ["Live Slot Map", "Vehicle Verification", "Shift Logs"]
     },
     {
+      role: "customer",
       title: "Customer / Driver",
       description: "Find, book, and pay for parking spots in seconds.",
       icon: UserCircle,
@@ -89,7 +92,7 @@ export default function Home() {
               <div className="p-6 pt-0 mt-auto">
                 <Button 
                   className="w-full h-12 text-lg font-bold rounded-xl gap-2" 
-                  onClick={() => router.push(`/login?role=${role.title.split(' ')[0].toLowerCase()}`)}
+                  onClick={() => router.push(`/login?role=${role.role}`)}
                 >
                   Enter as {role.title.split(' ')[0]} <ArrowRight className="h-5 w-5" />
                 </Button>
