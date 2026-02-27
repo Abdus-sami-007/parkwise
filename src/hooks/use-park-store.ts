@@ -1,3 +1,4 @@
+
 "use client";
 
 import { create } from 'zustand';
@@ -22,7 +23,6 @@ interface ParkState {
   seedSampleData: () => void;
 }
 
-// Ensure unique IDs and clear initial state
 const initialSlots: Record<string, ParkingSlot[]> = {};
 MOCK_LANDS.forEach(land => {
   initialSlots[land.id] = generateMockSlots(land.id, land.totalSlots);

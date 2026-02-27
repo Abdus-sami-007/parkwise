@@ -1,10 +1,11 @@
+
 "use client";
 
 import { useState } from "react";
 import { useParkStore } from "@/hooks/use-park-store";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MapPin, Search, Calendar, CreditCard, Info, Loader2, Navigation } from "lucide-react";
+import { MapPin, Search, CreditCard, Info, Loader2, Navigation } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import Image from "next/image";
 import { ParkingLand, ParkingSlot } from "@/lib/types";
@@ -20,6 +21,7 @@ import { SlotGrid } from "@/components/dashboard/slot-grid";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { cn } from "@/lib/utils";
 
 export default function CustomerDashboard() {
   const { lands, slots, createBooking, currentUser } = useParkStore();
@@ -208,5 +210,3 @@ export default function CustomerDashboard() {
     </div>
   );
 }
-
-import { cn } from "@/lib/utils";

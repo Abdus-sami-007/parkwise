@@ -22,12 +22,10 @@ import {
   BarChart3,
   ParkingCircle,
   Users,
-  Settings
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { NavUser } from "./nav-user";
-import { ThemeToggle } from "@/components/theme-toggle";
 
 export function AppSidebar() {
   const { currentUser } = useParkStore();
@@ -39,7 +37,7 @@ export function AppSidebar() {
     switch (role) {
       case 'owner':
         return [
-          { title: "Dashboard", icon: LayoutDashboard, url: "/dashboard/owner" },
+          { title: "Portfolio", icon: LayoutDashboard, url: "/dashboard/owner" },
           { title: "Manage Lands", icon: MapIcon, url: "/dashboard/owner/lands" },
           { title: "Analytics", icon: BarChart3, url: "/dashboard/owner/analytics" },
           { title: "Recruit Guards", icon: Users, url: "/dashboard/owner/guards" },
@@ -47,14 +45,14 @@ export function AppSidebar() {
       case 'guard':
         return [
           { title: "Live Patrol", icon: MapIcon, url: "/dashboard/guard" },
-          { title: "Check-in", icon: ShieldCheck, url: "/dashboard/guard/patrol" },
-          { title: "Logs", icon: BarChart3, url: "/dashboard/guard/reports" },
+          { title: "Duty Logs", icon: ShieldCheck, url: "/dashboard/guard/patrol" },
+          { title: "Reports", icon: BarChart3, url: "/dashboard/guard/reports" },
         ];
       case 'customer':
         return [
           { title: "Find Parking", icon: MapIcon, url: "/dashboard/customer" },
           { title: "My Bookings", icon: History, url: "/dashboard/customer/bookings" },
-          { title: "Payments", icon: CreditCard, url: "/dashboard/customer/payments" },
+          { title: "Wallet", icon: CreditCard, url: "/dashboard/customer/payments" },
         ];
       default:
         return [];
@@ -76,7 +74,7 @@ export function AppSidebar() {
                   </div>
                   <div className="flex flex-col gap-0.5 leading-none">
                     <span className="font-bold font-headline">ParkWise</span>
-                    <span className="text-[10px] text-muted-foreground uppercase font-black">{role} Portal</span>
+                    <span className="text-[10px] text-muted-foreground uppercase font-black">{role} Control</span>
                   </div>
                 </Link>
               </SidebarMenuButton>
@@ -86,7 +84,7 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="px-4 text-[10px] font-bold uppercase tracking-widest opacity-50">Menu</SidebarGroupLabel>
+          <SidebarGroupLabel className="px-4 text-[10px] font-bold uppercase tracking-widest opacity-50">Main Menu</SidebarGroupLabel>
           <SidebarMenu>
             {menuItems.map((item) => (
               <SidebarMenuItem key={item.title}>

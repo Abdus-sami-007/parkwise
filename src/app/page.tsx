@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -5,9 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useRouter } from "next/navigation";
 import { ShieldCheck, LayoutDashboard, ParkingCircle, ArrowRight, CheckCircle2, UserCircle } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useParkStore } from "@/hooks/use-park-store";
 
 export default function Home() {
   const router = useRouter();
+  const login = useParkStore(state => state.login);
 
   const roles = [
     {
@@ -17,7 +20,6 @@ export default function Home() {
       icon: LayoutDashboard,
       color: "text-blue-600",
       bg: "bg-blue-100 dark:bg-blue-900/30",
-      path: "/dashboard/owner",
       features: ["Add Parking Lands", "Revenue Analytics", "Guard Management"]
     },
     {
@@ -27,7 +29,6 @@ export default function Home() {
       icon: ShieldCheck,
       color: "text-emerald-600",
       bg: "bg-emerald-100 dark:bg-emerald-900/30",
-      path: "/dashboard/guard",
       features: ["Live Patrol View", "Plate Verification", "Incident Reporting"]
     },
     {
@@ -37,10 +38,14 @@ export default function Home() {
       icon: UserCircle,
       color: "text-orange-600",
       bg: "bg-orange-100 dark:bg-orange-900/30",
-      path: "/dashboard/customer",
       features: ["Instant Booking", "Real-time Availability", "Digital Passes"]
     }
   ];
+
+  const handleRoleEntry = (role: string) => {
+    login(role);
+    router.push(`/dashboard/${role}`);
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -63,7 +68,7 @@ export default function Home() {
             The Future of <span className="text-primary">Parking</span> is Here.
           </h1>
           <p className="text-2xl text-muted-foreground font-medium">
-            A comprehensive ecosystem connecting property owners, security teams, and drivers in real-time.
+            Instant entry for property owners, security teams, and drivers.
           </p>
         </div>
 
@@ -94,7 +99,7 @@ export default function Home() {
               <div className="p-8 pt-0 mt-auto">
                 <Button 
                   className="w-full h-14 text-xl font-black rounded-2xl gap-3 shadow-2xl shadow-primary/20 hover:shadow-primary/40 transition-all" 
-                  onClick={() => router.push(`/login?role=${role.role}`)}
+                  onClick={() => handleRoleEntry(role.role)}
                 >
                   Enter Portal <ArrowRight className="h-6 w-6" />
                 </Button>

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -10,15 +11,13 @@ import {
   Dialog, 
   DialogContent, 
   DialogHeader, 
-  DialogTitle, 
-  DialogFooter,
-  DialogDescription
+  DialogTitle
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Zap, ShieldAlert, CarFront, Loader2, RefreshCcw } from "lucide-react";
+import { Zap, CarFront, Loader2, RefreshCcw } from "lucide-react";
 import { guardAssistantRecommendations } from "@/ai/flows/guard-assistant-recommendations-flow";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
