@@ -8,13 +8,15 @@ import {
   onSnapshot, 
   doc, 
   updateDoc, 
-  addDoc, 
+  setDoc,
   serverTimestamp,
   Firestore,
   query,
   limit,
   where
 } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 interface ParkState {
   lands: ParkingLand[];
@@ -28,8 +30,9 @@ interface ParkState {
   initSync: (db: Firestore) => void;
   
   // Mutations
-  updateSlotStatus: (db: Firestore, landId: string, slotId: string, status: ParkingSlot['status'], vehicle?: string) => Promise<void>;
-  createBooking: (db: Firestore, booking: Omit<Booking, 'id'>) => Promise<void>;
+  updateSlotStatus: (db: Firestore, landId: string, slotId: string, status: ParkingSlot['status'], vehicle?: string) => void;
+  createBooking: (db: Firestore, booking: Omit<Booking, 'id'>) => void;
+  addParkingLand: (db: Firestore, ownerId: string, landData: { name: string, totalSlots: number, pricePerHour: number }) => void;
 }
 
 export const useParkStore = create<ParkState>((set, get) => ({
@@ -59,6 +62,12 @@ export const useParkStore = create<ParkState>((set, get) => ({
           }));
         });
       });
+    }, (error) => {
+       const permissionError = new FirestorePermissionError({
+          path: 'parkingLands',
+          operation: 'list',
+        });
+        errorEmitter.emit('permission-error', permissionError);
     });
 
     // Sync Bookings
@@ -76,26 +85,92 @@ export const useParkStore = create<ParkState>((set, get) => ({
     });
   },
 
-  updateSlotStatus: async (db, landId, slotId, status, vehicle) => {
+  updateSlotStatus: (db, landId, slotId, status, vehicle) => {
     const slotRef = doc(db, 'parkingLands', landId, 'slots', slotId);
-    updateDoc(slotRef, {
+    const data = {
       status,
       currentVehicle: vehicle || null,
       updatedAt: serverTimestamp()
+    };
+
+    updateDoc(slotRef, data).catch(async () => {
+      const permissionError = new FirestorePermissionError({
+        path: slotRef.path,
+        operation: 'update',
+        requestResourceData: data,
+      } satisfies SecurityRuleContext);
+      errorEmitter.emit('permission-error', permissionError);
     });
   },
 
-  createBooking: async (db, bookingData) => {
-    const bookingRef = await addDoc(collection(db, 'bookings'), {
-      ...bookingData,
-      createdAt: serverTimestamp()
-    });
-
+  createBooking: (db, bookingData) => {
+    const bookingRef = doc(collection(db, 'bookings'));
     const slotRef = doc(db, 'parkingLands', bookingData.landId, 'slots', bookingData.slotId);
-    updateDoc(slotRef, {
+    
+    const bookingDoc = {
+      ...bookingData,
+      id: bookingRef.id,
+      createdAt: serverTimestamp()
+    };
+
+    const slotUpdate = {
       status: 'booked',
       bookedBy: bookingData.userId,
       currentBookingId: bookingRef.id
+    };
+
+    setDoc(bookingRef, bookingDoc).catch(async () => {
+      const permissionError = new FirestorePermissionError({
+        path: bookingRef.path,
+        operation: 'create',
+        requestResourceData: bookingDoc,
+      } satisfies SecurityRuleContext);
+      errorEmitter.emit('permission-error', permissionError);
+    });
+
+    updateDoc(slotRef, slotUpdate).catch(async () => {
+      const permissionError = new FirestorePermissionError({
+        path: slotRef.path,
+        operation: 'update',
+        requestResourceData: slotUpdate,
+      } satisfies SecurityRuleContext);
+      errorEmitter.emit('permission-error', permissionError);
     });
   },
+
+  addParkingLand: (db, ownerId, landData) => {
+    const landRef = doc(collection(db, 'parkingLands'));
+    const landDoc = {
+      id: landRef.id,
+      ownerId: ownerId,
+      name: landData.name,
+      totalSlots: landData.totalSlots,
+      pricePerHour: landData.pricePerHour,
+      location: { lat: 17.3850, lng: 78.4867 }, // Default Hyderabad
+      image: `https://picsum.photos/seed/${landRef.id}/600/400`,
+      createdAt: serverTimestamp()
+    };
+
+    setDoc(landRef, landDoc).catch(async () => {
+      const permissionError = new FirestorePermissionError({
+        path: landRef.path,
+        operation: 'create',
+        requestResourceData: landDoc,
+      } satisfies SecurityRuleContext);
+      errorEmitter.emit('permission-error', permissionError);
+    });
+
+    // Initialize slots
+    for (let i = 0; i < landData.totalSlots; i++) {
+      const slotId = `slot-${i + 1}`;
+      const slotRef = doc(db, 'parkingLands', landRef.id, 'slots', slotId);
+      const slotData = {
+        id: slotId,
+        landId: landRef.id,
+        slotNumber: String.fromCharCode(65 + Math.floor(i / 10)) + (i % 10 + 1),
+        status: 'available'
+      };
+      setDoc(slotRef, slotData);
+    }
+  }
 }));
