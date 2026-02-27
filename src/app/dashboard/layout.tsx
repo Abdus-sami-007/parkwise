@@ -1,13 +1,11 @@
 
 "use client";
 
-import { useEffect } from "react";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Toaster } from "@/components/ui/toaster";
-import { useParkStore } from "@/hooks/use-park-store";
 import { usePathname } from "next/navigation";
 
 export default function DashboardLayout({
@@ -16,12 +14,6 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const initLocalData = useParkStore(state => state.initLocalData);
-
-  useEffect(() => {
-    // Initialize mock local data immediately
-    initLocalData();
-  }, [initLocalData]);
 
   return (
     <SidebarProvider>

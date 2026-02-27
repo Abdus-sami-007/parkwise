@@ -12,61 +12,45 @@ interface ParkState {
   availableGuards: UserProfile[];
   currentUser: UserProfile | null;
   loading: boolean;
-  isInitialized: boolean;
   
-  // Local Actions
+  // Actions
   login: (role: string, email?: string, name?: string) => void;
   updateSlotStatus: (landId: string, slotId: string, status: ParkingSlot['status'], vehicle?: string) => void;
   createBooking: (bookingData: Omit<Booking, 'id'>) => void;
   addParkingLand: (landData: { name: string, totalSlots: number, pricePerHour: number }) => void;
-  initLocalData: () => void;
-  seedSampleData: (db?: any) => void; // db parameter kept for compatibility
+  seedSampleData: () => void;
 }
 
+// Pre-initialize data for instant loading
+const initialSlots: Record<string, ParkingSlot[]> = {};
+MOCK_LANDS.forEach(land => {
+  initialSlots[land.id] = generateMockSlots(land.id, land.totalSlots);
+});
+
 export const useParkStore = create<ParkState>((set, get) => ({
-  lands: [],
-  slots: {},
+  lands: MOCK_LANDS,
+  slots: initialSlots,
   bookings: [],
-  availableGuards: [],
+  availableGuards: MOCK_USERS.filter(u => u.role === 'guard'),
   currentUser: null,
-  loading: true,
-  isInitialized: false,
-
-  initLocalData: () => {
-    if (get().isInitialized) return;
-
-    const initialSlots: Record<string, ParkingSlot[]> = {};
-    MOCK_LANDS.forEach(land => {
-      initialSlots[land.id] = generateMockSlots(land.id, land.totalSlots);
-    });
-
-    set({ 
-      lands: MOCK_LANDS, 
-      slots: initialSlots, 
-      availableGuards: MOCK_USERS.filter(u => u.role === 'guard'),
-      loading: false, 
-      isInitialized: true 
-    });
-  },
+  loading: false,
 
   seedSampleData: () => {
-    const initialSlots: Record<string, ParkingSlot[]> = {};
+    const freshSlots: Record<string, ParkingSlot[]> = {};
     MOCK_LANDS.forEach(land => {
-      initialSlots[land.id] = generateMockSlots(land.id, land.totalSlots);
+      freshSlots[land.id] = generateMockSlots(land.id, land.totalSlots);
     });
-    set({ lands: MOCK_LANDS, slots: initialSlots });
+    set({ lands: MOCK_LANDS, slots: freshSlots });
   },
 
   login: (role, email, name) => {
     const user: UserProfile = {
       uid: `user-${Math.random().toString(36).substr(2, 9)}`,
-      email: email || `${role}@parkwise.com`,
+      email: email || `${role}@example.com`,
       displayName: name || (role.charAt(0).toUpperCase() + role.slice(1)),
       role: role as any,
     };
     set({ currentUser: user });
-    // Initialize data if not already
-    get().initLocalData();
   },
 
   updateSlotStatus: (landId, slotId, status, vehicle) => {
