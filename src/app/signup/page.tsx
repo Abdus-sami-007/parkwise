@@ -8,15 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ParkingCircle, ArrowRight, Home } from "lucide-react";
+import { ParkingCircle, ArrowRight, Home, User } from "lucide-react";
 import { useParkStore } from "@/hooks/use-park-store";
 import Link from "next/link";
 
 export default function SignupPage() {
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [phone, setPhone] = useState("");
   const [role, setRole] = useState<string>("customer");
   
   const router = useRouter();
@@ -24,8 +21,8 @@ export default function SignupPage() {
 
   const handleSignup = (e: React.FormEvent) => {
     e.preventDefault();
-    // Bypass all verification as requested
-    login(role);
+    // Simple entry: no database verification
+    login(role, `${name.toLowerCase().replace(/\s/g, '')}@example.com`, name);
     router.replace(`/dashboard/${role}`);
   };
 
@@ -47,12 +44,12 @@ export default function SignupPage() {
             </div>
           </div>
           <CardTitle className="text-3xl font-bold font-headline">Join ParkWise</CardTitle>
-          <CardDescription>Select your role and get started</CardDescription>
+          <CardDescription>Quick entry to explore the platform</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSignup} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="role">User Role</Label>
+              <Label htmlFor="role">Your Role</Label>
               <Select value={role} onValueChange={setRole}>
                 <SelectTrigger className="h-11">
                   <SelectValue placeholder="Select role" />
@@ -66,33 +63,28 @@ export default function SignupPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
-              <Input id="name" placeholder="John Doe" value={name} onChange={(e) => setName(e.target.value)} required />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
-              <Input id="phone" placeholder="+91 XXXXX XXXXX" value={phone} onChange={(e) => setPhone(e.target.value)} required />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              <Label htmlFor="name">Full Name or Username</Label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  id="name" 
+                  className="pl-10" 
+                  placeholder="e.g. John Doe" 
+                  value={name} 
+                  onChange={(e) => setName(e.target.value)} 
+                  required 
+                />
+              </div>
             </div>
 
             <Button type="submit" className="w-full h-11 text-lg font-bold mt-4">
-              Create Account <ArrowRight className="ml-2 h-5 w-5" />
+              Enter ParkWise <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </form>
         </CardContent>
         <CardFooter className="text-center">
           <p className="text-sm text-muted-foreground w-full">
-            Already registered? <Link href="/login" className="text-primary font-bold hover:underline">Sign in</Link>
+            Already have a profile? <Link href="/login" className="text-primary font-bold hover:underline">Sign in</Link>
           </p>
         </CardFooter>
       </Card>

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ParkingCircle, Mail, Lock, LogIn, Home } from "lucide-react";
+import { ParkingCircle, LogIn, Home, User } from "lucide-react";
 import { useParkStore } from "@/hooks/use-park-store";
 import Link from "next/link";
 
@@ -15,16 +15,14 @@ export default function LoginPage() {
   const searchParams = useSearchParams();
   const requestedRole = searchParams.get('role') || 'customer';
   
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  
+  const [identifier, setIdentifier] = useState("");
   const router = useRouter();
   const login = useParkStore(state => state.login);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // Bypass all verification as requested
-    login(requestedRole);
+    // Simple entry: no database verification
+    login(requestedRole, identifier || `${requestedRole}@example.com`, identifier || requestedRole);
     router.replace(`/dashboard/${requestedRole}`);
   };
 
@@ -46,32 +44,32 @@ export default function LoginPage() {
             </div>
           </div>
           <CardTitle className="text-3xl font-bold font-headline">Welcome Back</CardTitle>
-          <CardDescription>Sign in to your ParkWise account</CardDescription>
+          <CardDescription>Enter as a {requestedRole}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="identifier">Email or Username</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input id="email" type="email" className="pl-10" placeholder="name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input id="password" type="password" className="pl-10" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  id="identifier" 
+                  className="pl-10" 
+                  placeholder="Enter anything to enter..." 
+                  value={identifier} 
+                  onChange={(e) => setIdentifier(e.target.value)} 
+                  required 
+                />
               </div>
             </div>
             <Button type="submit" className="w-full h-11 text-lg font-bold gap-2">
-              <LogIn className="h-5 w-5" /> Sign In
+              <LogIn className="h-5 w-5" /> Enter Dashboard
             </Button>
           </form>
         </CardContent>
         <CardFooter className="text-center">
           <p className="text-sm text-muted-foreground w-full">
-            Don't have an account? <Link href="/signup" className="text-primary font-bold hover:underline">Sign up</Link>
+            Want a new profile? <Link href="/signup" className="text-primary font-bold hover:underline">Join now</Link>
           </p>
         </CardFooter>
       </Card>

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useUser } from "@/firebase";
+import { useParkStore } from "@/hooks/use-park-store";
 import {
   Sidebar,
   SidebarContent,
@@ -18,11 +18,9 @@ import {
   Map as MapIcon, 
   History, 
   CreditCard, 
-  Settings, 
   ShieldCheck, 
   BarChart3,
   ParkingCircle,
-  PlusCircle,
   Users
 } from "lucide-react";
 import Link from "next/link";
@@ -31,12 +29,10 @@ import { NavUser } from "./nav-user";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export function AppSidebar() {
-  const { user } = useUser();
+  const { currentUser } = useParkStore();
   const pathname = usePathname();
 
-  // In a real app, role would be a custom claim or fetched from Firestore
-  // For this demo, we can infer from path or assume customer
-  const role = pathname.includes('/owner') ? 'owner' : pathname.includes('/guard') ? 'guard' : 'customer';
+  const role = currentUser?.role || 'customer';
 
   const getMenuItems = () => {
     switch (role) {

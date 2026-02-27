@@ -15,11 +15,12 @@ interface ParkState {
   isInitialized: boolean;
   
   // Local Actions
-  login: (role: string) => void;
+  login: (role: string, email?: string, name?: string) => void;
   updateSlotStatus: (landId: string, slotId: string, status: ParkingSlot['status'], vehicle?: string) => void;
-  createBooking: (booking: Omit<Booking, 'id'>) => void;
+  createBooking: (bookingData: Omit<Booking, 'id'>) => void;
   addParkingLand: (landData: { name: string, totalSlots: number, pricePerHour: number }) => void;
   initLocalData: () => void;
+  seedSampleData: (db?: any) => void; // db parameter kept for compatibility
 }
 
 export const useParkStore = create<ParkState>((set, get) => ({
@@ -48,9 +49,24 @@ export const useParkStore = create<ParkState>((set, get) => ({
     });
   },
 
-  login: (role) => {
-    const user = MOCK_USERS.find(u => u.role === role) || MOCK_USERS[0];
+  seedSampleData: () => {
+    const initialSlots: Record<string, ParkingSlot[]> = {};
+    MOCK_LANDS.forEach(land => {
+      initialSlots[land.id] = generateMockSlots(land.id, land.totalSlots);
+    });
+    set({ lands: MOCK_LANDS, slots: initialSlots });
+  },
+
+  login: (role, email, name) => {
+    const user: UserProfile = {
+      uid: `user-${Math.random().toString(36).substr(2, 9)}`,
+      email: email || `${role}@parkwise.com`,
+      displayName: name || (role.charAt(0).toUpperCase() + role.slice(1)),
+      role: role as any,
+    };
     set({ currentUser: user });
+    // Initialize data if not already
+    get().initLocalData();
   },
 
   updateSlotStatus: (landId, slotId, status, vehicle) => {
