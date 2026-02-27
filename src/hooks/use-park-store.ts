@@ -1,4 +1,3 @@
-
 "use client";
 
 import { create } from 'zustand';
@@ -18,12 +17,12 @@ interface ParkState {
   logout: () => void;
   updateSlotStatus: (landId: string, slotId: string, status: ParkingSlot['status'], vehicle?: string) => void;
   createBooking: (bookingData: Omit<Booking, 'id'>) => void;
-  addParkingLand: (landData: { name: string, totalSlots: number, pricePerHour: number }) => void;
+  addParkingLand: (db: any, ownerId: string, landData: { name: string, totalSlots: number, pricePerHour: number }) => void;
   recruitGuard: (guardId: string) => void;
   seedSampleData: () => void;
 }
 
-// Pre-initialize data for instant loading
+// Ensure unique IDs and clear initial state
 const initialSlots: Record<string, ParkingSlot[]> = {};
 MOCK_LANDS.forEach(land => {
   initialSlots[land.id] = generateMockSlots(land.id, land.totalSlots);
@@ -42,7 +41,7 @@ export const useParkStore = create<ParkState>((set, get) => ({
     MOCK_LANDS.forEach(land => {
       freshSlots[land.id] = generateMockSlots(land.id, land.totalSlots);
     });
-    set({ lands: MOCK_LANDS, slots: freshSlots });
+    set({ lands: MOCK_LANDS, slots: freshSlots, bookings: [] });
   },
 
   login: (role, email, name) => {
@@ -86,11 +85,11 @@ export const useParkStore = create<ParkState>((set, get) => ({
     get().updateSlotStatus(bookingData.landId, bookingData.slotId, 'booked');
   },
 
-  addParkingLand: (landData) => {
+  addParkingLand: (db, ownerId, landData) => {
     const id = `land-${Math.random().toString(36).substr(2, 9)}`;
     const newLand: ParkingLand = {
       id,
-      ownerId: get().currentUser?.uid || 'anonymous',
+      ownerId: ownerId || 'anonymous',
       name: landData.name,
       location: { lat: 17.3850, lng: 78.4867 },
       totalSlots: landData.totalSlots,
