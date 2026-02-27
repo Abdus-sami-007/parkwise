@@ -70,7 +70,7 @@ export default function GuardDashboard() {
       console.error("AI Assistant unreachable, switching to system logic", error);
       setIsAiOffline(true);
       
-      // Fallback: Use simple rule-based recommendations if AI quota is hit
+      // Fallback: Use simple rule-based recommendations if AI quota is hit (429)
       const occupied = currentSlots.filter(s => s.status === 'occupied').length;
       const booked = currentSlots.filter(s => s.status === 'booked').length;
       
@@ -104,7 +104,7 @@ export default function GuardDashboard() {
           <p className="text-muted-foreground font-medium">Monitoring live slot occupancy and traffic flow.</p>
         </div>
         <div className="flex items-center gap-4 bg-card p-2 rounded-2xl shadow-sm border">
-          <Label className="pl-4 font-black uppercase text-[10px] tracking-widest">Active Site</Label>
+          <Label className="pl-4 font-black uppercase text-[10px] tracking-widest text-muted-foreground">Active Site</Label>
           <Select value={selectedLandId} onValueChange={setSelectedLandId}>
             <SelectTrigger className="w-[280px] h-11 border-none shadow-none font-bold text-base focus:ring-0">
               <SelectValue placeholder="Select site" />
