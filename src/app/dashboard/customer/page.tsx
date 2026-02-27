@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -20,6 +19,7 @@ import {
 import { SlotGrid } from "@/components/dashboard/slot-grid";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function CustomerDashboard() {
   const { lands, slots, createBooking, currentUser } = useParkStore();
@@ -67,6 +67,7 @@ export default function CustomerDashboard() {
           alt="Banner" 
           fill 
           className="object-cover brightness-50"
+          data-ai-hint="parking lot"
         />
         <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-white text-center">
           <h1 className="text-3xl font-extrabold mb-4 font-headline">Find Your Spot</h1>
@@ -100,6 +101,7 @@ export default function CustomerDashboard() {
                   alt={land.name} 
                   fill 
                   className="object-cover group-hover:scale-105 transition-transform"
+                  data-ai-hint="parking lot"
                 />
                 <Badge className="absolute top-3 right-3 bg-white/90 text-primary font-bold">
                   ₹{land.pricePerHour}/hr
@@ -126,7 +128,6 @@ export default function CustomerDashboard() {
         })}
       </div>
 
-      {/* Availability Dialog */}
       <Dialog open={!!selectedLand && !selectedSlot} onOpenChange={() => setSelectedLand(null)}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto border-none shadow-2xl">
           <DialogHeader>
@@ -142,7 +143,6 @@ export default function CustomerDashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Booking Confirmation */}
       <Dialog open={!!selectedSlot && !!selectedLand} onOpenChange={() => setSelectedSlot(null)}>
         <DialogContent className="border-none shadow-2xl">
           <DialogHeader>
