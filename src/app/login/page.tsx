@@ -1,13 +1,12 @@
-
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ParkingCircle, Mail, Lock, Loader2, AlertCircle, Home, RefreshCcw, Sparkles } from "lucide-react";
+import { ParkingCircle, Mail, Lock, Loader2, AlertCircle, Home, RefreshCcw, LogIn } from "lucide-react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { useAuth, useFirestore } from "@/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
@@ -19,8 +18,8 @@ export default function LoginPage() {
   const searchParams = useSearchParams();
   const requestedRole = searchParams.get('role') || 'customer';
   
-  const [email, setEmail] = useState(`${requestedRole}@parkwise.com`);
-  const [password, setPassword] = useState("password123");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<{title: string, message: string} | null>(null);
@@ -30,16 +29,15 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const handleNameSakeLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!auth || !db) return;
 
     setLoading(true);
     setErrorMessage(null);
-    setStatus("Connecting to Database...");
+    setStatus("Authenticating...");
 
     try {
-      // 1. Name sake auth - usually fixed credentials for demo
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const uid = userCredential.user.uid;
       
@@ -47,24 +45,32 @@ export default function LoginPage() {
       const userDocRef = doc(db, "users", uid);
       const userSnap = await getDoc(userDocRef);
       
-      if (!userSnap.exists()) {
-        setStatus("Creating Name Sake Profile...");
+      let userRole = requestedRole;
+      if (userSnap.exists()) {
+        userRole = userSnap.data().role || requestedRole;
+      } else {
+        // Fallback profile creation if auth succeeds but Firestore document is missing
+        setStatus("Finalizing Profile...");
         await setDoc(userDocRef, {
           uid,
           email,
-          displayName: requestedRole.charAt(0).toUpperCase() + requestedRole.slice(1) + " Demo",
+          displayName: userCredential.user.displayName || "User",
           role: requestedRole,
           createdAt: new Date().toISOString()
         });
       }
 
-      toast({ title: "Welcome!", description: `Entering as ${requestedRole}...` });
-      router.replace(`/dashboard/${requestedRole}`);
+      toast({ title: "Welcome Back", description: `Signed in successfully.` });
+      router.replace(`/dashboard/${userRole}`);
     } catch (error: any) {
       console.error("Login error:", error);
+      let message = "Invalid email or password. Please check your credentials.";
+      if (error.code === 'auth/network-request-failed') {
+        message = "Network error. Please ensure you are online.";
+      }
       setErrorMessage({ 
-        title: "Connection Issue", 
-        message: "Unable to verify credentials. Please try signing up if this is your first time or check domain authorization." 
+        title: "Login Failed", 
+        message 
       });
       setLoading(false);
       setStatus(null);
@@ -88,8 +94,8 @@ export default function LoginPage() {
               <ParkingCircle className="h-8 w-8 text-white" />
             </div>
           </div>
-          <CardTitle className="text-3xl font-bold font-headline">Name Sake Login</CardTitle>
-          <CardDescription>Demo mode active for <strong>{requestedRole}</strong></CardDescription>
+          <CardTitle className="text-3xl font-bold font-headline">Welcome Back</CardTitle>
+          <CardDescription>Sign in to your ParkWise account</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {errorMessage && (
@@ -112,29 +118,29 @@ export default function LoginPage() {
             </div>
           )}
 
-          <form onSubmit={handleNameSakeLogin} className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input id="email" type="email" className="pl-10" value={email} onChange={(e) => setEmail(e.target.value)} disabled={loading} required />
+                <Input id="email" type="email" className="pl-10" placeholder="name@example.com" value={email} onChange={(e) => setEmail(e.target.value)} disabled={loading} required />
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input id="password" type="password" className="pl-10" value={password} onChange={(e) => setPassword(e.target.value)} disabled={loading} required />
+                <Input id="password" type="password" className="pl-10" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} disabled={loading} required />
               </div>
             </div>
             <Button type="submit" className="w-full h-11 text-lg font-bold gap-2" disabled={loading}>
-              {loading ? <Loader2 className="animate-spin" /> : <><Sparkles className="h-5 w-5" /> Quick Access</>}
+              {loading ? <Loader2 className="animate-spin" /> : <><LogIn className="h-5 w-5" /> Sign In</>}
             </Button>
           </form>
         </CardContent>
         <CardFooter className="text-center">
           <p className="text-sm text-muted-foreground w-full">
-            Want to use a different account? <Link href="/signup" className="text-primary font-bold hover:underline">Create One</Link>
+            Don't have an account? <Link href="/signup" className="text-primary font-bold hover:underline">Sign up</Link>
           </p>
         </CardFooter>
       </Card>
