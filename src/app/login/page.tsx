@@ -34,20 +34,25 @@ export default function LoginPage() {
     setErrorMessage(null);
 
     try {
+      // 1. Authenticate with Firebase Auth
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       
-      // Use getDoc with a slight delay or retry if propagation is slow
+      // 2. Immediately verify profile exists in Firestore (Direct DB Check)
       const userDocRef = doc(db, "users", userCredential.user.uid);
       const userDoc = await getDoc(userDocRef);
       
       if (userDoc.exists()) {
         const userData = userDoc.data();
+        toast({ title: "Welcome back!", description: "Accessing your dashboard..." });
         router.replace(`/dashboard/${userData.role}`);
-        toast({ title: "Welcome back!", description: "Successfully signed in." });
       } else {
-        // If doc is missing but auth succeeded, redirect to dashboard layout 
-        // which handles profile sync/missing states better
-        router.replace(`/dashboard/customer`); // Default fallback, layout will correct it
+        // Auth succeeded but no profile doc yet - redirect to layout for sync handling
+        toast({ 
+          title: "Profile Syncing", 
+          description: "Authenticated successfully. Syncing profile data...",
+          variant: "default"
+        });
+        router.replace(`/dashboard/customer`);
       }
     } catch (error: any) {
       console.error("Login error:", error);
@@ -55,9 +60,9 @@ export default function LoginPage() {
       let message = "Invalid email or password.";
       
       if (error.code === 'auth/unauthorized-domain') {
-        message = "This domain is not authorized. Please add it to your Firebase Auth settings.";
+        message = "This domain is not authorized. Please add it to Authorized Domains in Firebase Console.";
       } else if (error.code === 'auth/network-request-failed') {
-        message = "Network error. Firebase is unable to reach the server. Please check your connection.";
+        message = "Network error. Firebase is unable to reach the server. Ensure long-polling is enabled.";
       } else if (error.code === 'auth/too-many-requests') {
         message = "Too many failed attempts. Please try again later.";
       }
@@ -83,9 +88,13 @@ export default function LoginPage() {
       }
     } catch (error: any) {
       console.error("Google Auth error:", error);
+      let message = error.message;
+      if (error.code === 'auth/unauthorized-domain') {
+        message = "Domain not authorized in Firebase Console.";
+      }
       setErrorMessage({
         title: "Google Auth Failed",
-        message: error.message || "Could not sign in with Google."
+        message
       });
       setLoading(false);
     }
@@ -109,7 +118,7 @@ export default function LoginPage() {
             </div>
           </div>
           <CardTitle className="text-3xl font-bold font-headline">Sign In</CardTitle>
-          <CardDescription>Enter your email to access ParkWise</CardDescription>
+          <CardDescription>Directly verifying with ParkWise Database</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {errorMessage && (

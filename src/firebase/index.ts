@@ -1,3 +1,4 @@
+
 'use client';
 
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
@@ -8,7 +9,7 @@ import { firebaseConfig } from './config';
 /**
  * Initializes Firebase with optimizations for Cloud Workstation environments.
  * 1. Forces long polling to bypass WebSocket proxy issues.
- * 2. Uses memory-only cache to prevent persistent disk-lock errors.
+ * 2. Uses memory-only cache to prevent persistent disk-lock errors and ensure fresh data.
  */
 export function initializeFirebase() {
   const apps = getApps();
@@ -22,6 +23,8 @@ export function initializeFirebase() {
 
   let db: Firestore;
   try {
+    // We use memoryLocalCache() to explicitly prevent the app from 
+    // retrieving stale data from a corrupted or slow disk cache.
     db = initializeFirestore(app, {
       experimentalForceLongPolling: true,
       localCache: memoryLocalCache(),

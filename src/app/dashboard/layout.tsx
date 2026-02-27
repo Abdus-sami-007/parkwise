@@ -13,7 +13,6 @@ import { doc, onSnapshot } from "firebase/firestore";
 import { Loader2, WifiOff, RefreshCcw, AlertCircle } from "lucide-react";
 import { useParkStore } from "@/hooks/use-park-store";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 export default function DashboardLayout({
   children,
@@ -40,9 +39,10 @@ export default function DashboardLayout({
 
     if (!db) return;
 
-    // Start data sync
+    // Start background data sync for the store
     initSync(db);
 
+    // Monitor connectivity and profile propagation
     const timer = setTimeout(() => {
       if (!roleChecked) setTakingLongTime(true);
     }, 5000);
@@ -51,6 +51,7 @@ export default function DashboardLayout({
       if (!roleChecked) setProfileMissing(true);
     }, 8000);
 
+    // Direct Database Listener for User Profile
     const unsub = onSnapshot(doc(db, "users", user.uid), (snapshot) => {
       setIsOffline(false);
       setTakingLongTime(false);
@@ -58,13 +59,15 @@ export default function DashboardLayout({
       
       if (snapshot.exists()) {
         const role = snapshot.data().role;
+        // Ensure user is on the correct dashboard for their role
         if (!pathname.includes(`/dashboard/${role}`)) {
           router.replace(`/dashboard/${role}`);
         } else {
           setRoleChecked(true);
         }
       } else {
-        console.warn("User profile not found in Firestore yet.");
+        // Document doesn't exist yet (Sync delay)
+        console.warn("User profile not found in database. Waiting for propagation...");
       }
     }, (error) => {
       console.error("Profile listen error:", error);
@@ -78,27 +81,28 @@ export default function DashboardLayout({
     };
   }, [user, authLoading, db, pathname, router, initSync, roleChecked]);
 
+  // Loading Screen with Actionable Feedback
   if (authLoading || (user && !roleChecked && !isOffline)) {
     return (
       <div className="h-screen w-screen flex flex-col items-center justify-center bg-background gap-4 p-6 text-center">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
         <div className="space-y-2 max-w-sm">
           <p className="text-muted-foreground animate-pulse font-medium">
-            {profileMissing ? "Syncing profile data..." : "Connecting to secure server..."}
+            {profileMissing ? "Syncing profile data..." : "Verifying credentials with Database..."}
           </p>
           
           {profileMissing && (
             <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-950/20 rounded-xl border border-amber-200 dark:border-amber-800 animate-in fade-in slide-in-from-bottom-2">
               <AlertCircle className="h-5 w-5 text-amber-600 mx-auto mb-2" />
               <p className="text-xs text-amber-700 dark:text-amber-400 font-medium mb-3">
-                Your profile data is still propagating. This can happen on first sign-in.
+                Your profile is still being created on the server. This is normal on first sign-in.
               </p>
               <div className="flex flex-col gap-2">
                 <Button variant="outline" size="sm" onClick={() => window.location.reload()} className="gap-2">
-                  <RefreshCcw className="h-3 w-3" /> Retry Sync
+                  <RefreshCcw className="h-3 w-3" /> Force Sync
                 </Button>
                 <Button variant="ghost" size="sm" onClick={() => router.push('/signup')}>
-                  Go back to Signup
+                  Back to Signup
                 </Button>
               </div>
             </div>
@@ -106,9 +110,9 @@ export default function DashboardLayout({
           
           {!profileMissing && takingLongTime && (
             <div className="mt-4 animate-in fade-in">
-              <p className="text-xs text-muted-foreground mb-3">Connection is slower than usual.</p>
+              <p className="text-xs text-muted-foreground mb-3">The connection is a bit slow. Hang tight!</p>
               <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
-                Refresh
+                Refresh Page
               </Button>
             </div>
           )}
@@ -117,6 +121,7 @@ export default function DashboardLayout({
     );
   }
 
+  // Offline / Error Screen
   if (isOffline) {
     return (
       <div className="h-screen w-screen flex items-center justify-center p-6 bg-background">
@@ -125,13 +130,13 @@ export default function DashboardLayout({
             <WifiOff className="h-10 w-10 text-muted-foreground" />
           </div>
           <div className="space-y-2">
-            <h1 className="text-2xl font-bold">Network Connection Issue</h1>
+            <h1 className="text-2xl font-bold">Database Connectivity Issue</h1>
             <p className="text-muted-foreground">
-              We're having trouble connecting to the real-time database. Please check your internet connection.
+              We're unable to reach the live Firebase servers. Please check your internet or domain authorization.
             </p>
           </div>
           <Button onClick={() => window.location.reload()} className="w-full gap-2">
-            <RefreshCcw className="h-4 w-4" /> Retry Connection
+            <RefreshCcw className="h-4 w-4" /> Reconnect Now
           </Button>
         </div>
       </div>
