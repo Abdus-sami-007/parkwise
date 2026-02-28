@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -43,7 +42,7 @@ export default function Home() {
   ];
 
   const handleRoleEntry = (role: string) => {
-    login(role);
+    login(role, `${role}@example.com`, role.charAt(0).toUpperCase() + role.slice(1));
     router.push(`/dashboard/${role}`);
   };
 

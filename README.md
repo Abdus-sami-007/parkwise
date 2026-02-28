@@ -1,32 +1,35 @@
 # ParkWise - Smart Parking Management
 
-This is a production-ready Next.js application for managing parking properties, guards, and customer bookings.
+ParkWise is a production-ready Next.js application for managing parking properties, guards, and customer bookings with zero-latency role-based dashboards.
 
-## 🚀 Free Hosting Guide (GitHub)
+## 🚀 Free Hosting Guide
 
-The easiest way to host this app for free is using **Vercel** or **Firebase App Hosting**.
+To host this application for free with automatic updates from your GitHub repository, we recommend **Vercel** or **Firebase App Hosting**.
 
-### Option 1: Vercel (Recommended for Next.js)
-1.  **Push to GitHub**: Create a new repository on GitHub and push this code.
-2.  **Sign up for Vercel**: Go to [vercel.com](https://vercel.com) and sign in with GitHub.
-3.  **Import Project**: Click "Add New" > "Project" and select your `ParkWise` repository.
-4.  **Environment Variables**: If you have a Gemini API Key, add `GOOGLE_GENAI_API_KEY` in the "Environment Variables" section.
-5.  **Deploy**: Click "Deploy". Your app will be live on a `.vercel.app` subdomain!
+### Option 1: Vercel (Recommended)
+1.  **Push to GitHub**: Commit your changes and push them to your repository.
+2.  **Import to Vercel**:
+    *   Sign in to [vercel.com](https://vercel.com) using your GitHub account.
+    *   Click "Add New" > "Project".
+    *   Import your `ParkWise` repository.
+3.  **Environment Variables**:
+    *   Add `GOOGLE_GENAI_API_KEY` (if using AI features).
+4.  **Deploy**: Click "Deploy". Your app will be live on a `.vercel.app` domain!
 
 ### Option 2: Firebase App Hosting
-1.  **Firebase Console**: Go to the [Firebase Console](https://console.firebase.google.com/).
-2.  **Build > App Hosting**: Click "Get Started" and connect your GitHub repository.
-3.  **Configuration**: Follow the wizard to set up your root directory and settings.
-4.  **Deploy**: Firebase will automatically build and deploy your Next.js app.
+1.  **Firebase Console**: Go to [console.firebase.google.com](https://console.firebase.google.com/).
+2.  **App Hosting**: Navigate to "Build" > "App Hosting" and click "Get Started".
+3.  **Connect GitHub**: Select your repository and the branch you want to deploy.
+4.  **Finish Setup**: Firebase will automatically detect the Next.js settings and build your app.
 
 ## 🛠 Features
-- **Owner Dashboard**: Manage lands and view analytics.
-- **Guard Dashboard**: Real-time patrol and vehicle logging with AI fallbacks.
-- **Customer Dashboard**: Find and book spots instantly.
-- **AI Integration**: Powered by Google Gemini via Genkit.
+- **Zero-Latency Entry**: Instant role-based access for Owners, Guards, and Customers.
+- **Smart Guard Assistant**: AI-powered recommendations for parking flow (with local system fallback).
+- **Interactive Map**: Real-time slot monitoring and vehicle logging.
+- **Unified Wallet**: Mock payment integration for seamless bookings.
 
 ## 💻 Tech Stack
 - **Framework**: Next.js 15 (App Router)
 - **Styling**: Tailwind CSS + ShadCN UI
-- **State**: Zustand (Local-first for high performance)
-- **AI**: Genkit 1.x
+- **State Management**: Zustand (Local-first for high performance)
+- **AI**: Google Gemini via Genkit 1.x

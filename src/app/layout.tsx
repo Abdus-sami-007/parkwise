@@ -6,7 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
   title: 'ParkWise - Smart Parking Management',
-  description: 'Production-ready smart parking system with real-time updates and AI integration.',
+  description: 'The future of parking. Real-time slot management, guard assistants, and seamless driver bookings.',
 };
 
 export default function RootLayout({
