@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -39,27 +38,25 @@ export default function CustomerDashboard() {
     if (currentUser && selectedLand && selectedSlot) {
       setIsBooking(true);
       
-      // Artificial delay for realism in the prototype
-      setTimeout(() => {
-        createBooking({
-          userId: currentUser.uid,
-          landId: selectedLand.id,
-          slotId: selectedSlot.id,
-          startTime: new Date().toISOString(),
-          endTime: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
-          amount: selectedLand.pricePerHour * 2,
-          status: 'confirmed'
-        });
+      // Instant transition for prototype performance
+      createBooking({
+        userId: currentUser.uid,
+        landId: selectedLand.id,
+        slotId: selectedSlot.id,
+        startTime: new Date().toISOString(),
+        endTime: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+        amount: selectedLand.pricePerHour * 2,
+        status: 'confirmed'
+      });
 
-        toast({
-          title: "Booking Confirmed!",
-          description: `Slot ${selectedSlot.slotNumber} reserved at ${selectedLand.name}.`,
-        });
-        
-        setIsBooking(false);
-        setSelectedSlot(null);
-        setSelectedLand(null);
-      }, 800);
+      toast({
+        title: "Booking Confirmed!",
+        description: `Slot ${selectedSlot.slotNumber} reserved at ${selectedLand.name}.`,
+      });
+      
+      setIsBooking(false);
+      setSelectedSlot(null);
+      setSelectedLand(null);
     }
   };
 

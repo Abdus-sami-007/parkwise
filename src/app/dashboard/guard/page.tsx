@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -10,14 +9,13 @@ import { ParkingSlot } from "@/lib/types";
 import { 
   Dialog, 
   DialogContent, 
-  DialogHeader, 
-  DialogTitle
+  DialogHeader 
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Zap, CarFront, Loader2, RefreshCcw, Info } from "lucide-react";
+import { Zap, CarFront, Loader2, RefreshCcw } from "lucide-react";
 import { guardAssistantRecommendations } from "@/ai/flows/guard-assistant-recommendations-flow";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
@@ -45,7 +43,6 @@ export default function GuardDashboard() {
     if (selectedSlot) {
       updateSlotStatus(selectedLandId, selectedSlot.id, status, status === 'occupied' ? vehiclePlate : undefined);
       setSelectedSlot(null);
-      // Trigger a quick re-analysis
       getAIRecommendations();
     }
   };
@@ -82,8 +79,8 @@ export default function GuardDashboard() {
       setRecommendations(systemRecs);
       
       toast({
-        title: "AI Assistant Offline",
-        description: "Quota reached or network error. Using local system logic.",
+        title: "Intelligence Fallback Active",
+        description: "Gemini quota reached. Using local system logic for flow analysis.",
       });
     } finally {
       setLoadingAI(false);
