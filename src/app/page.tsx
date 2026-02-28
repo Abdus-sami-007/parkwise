@@ -129,7 +129,7 @@ export default function Home() {
 
       <footer className="py-12 border-t bg-card/30 mt-auto">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6 text-muted-foreground text-sm font-bold">
-          <div>© 2024 ParkWise Smart Systems. Prototyping Mode.</div>
+          <div>© 2026 ParkWise Smart Systems.</div>
           <div className="flex gap-8">
             <a href="#" className="hover:text-primary">Privacy</a>
             <a href="#" className="hover:text-primary">Terms</a>
