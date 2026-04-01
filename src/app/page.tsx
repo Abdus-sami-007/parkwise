@@ -2,15 +2,11 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useRouter } from "next/navigation";
 import { ShieldCheck, LayoutDashboard, ParkingCircle, ArrowRight, CheckCircle2, UserCircle } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { useParkStore } from "@/hooks/use-park-store";
+import Link from "next/link";
 
 export default function Home() {
-  const router = useRouter();
-  const login = useParkStore(state => state.login);
-
   const roles = [
     {
       role: "owner",
@@ -41,11 +37,6 @@ export default function Home() {
     }
   ];
 
-  const handleRoleEntry = (role: string) => {
-    login(role, `${role}@example.com`, role.charAt(0).toUpperCase() + role.slice(1));
-    router.push(`/dashboard/${role}`);
-  };
-
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <header className="px-6 py-5 flex items-center justify-between border-b bg-background/80 backdrop-blur-xl sticky top-0 z-50">
@@ -55,19 +46,27 @@ export default function Home() {
           </div>
           <span className="text-2xl font-black text-primary font-headline tracking-tighter">ParkWise</span>
         </div>
-        <ThemeToggle />
+        <div className="flex items-center gap-4">
+          <ThemeToggle />
+          <Button variant="ghost" asChild className="font-bold hidden md:flex">
+            <Link href="/login">Sign In</Link>
+          </Button>
+          <Button asChild className="rounded-xl font-bold px-6">
+            <Link href="/signup">Get Started</Link>
+          </Button>
+        </div>
       </header>
 
       <main className="flex-1 flex flex-col items-center p-6 space-y-16 max-w-7xl mx-auto w-full py-20">
         <div className="text-center space-y-6 max-w-4xl">
           <div className="inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-black uppercase tracking-widest mb-4">
-            Smart City Solutions
+            Smart City Parking Solution
           </div>
           <h1 className="text-6xl md:text-8xl font-black tracking-tighter text-foreground font-headline leading-[0.9]">
             The Future of <span className="text-primary">Parking</span> is Here.
           </h1>
           <p className="text-2xl text-muted-foreground font-medium">
-            Instant entry for property owners, security teams, and drivers.
+            Next-generation management for property owners, security teams, and drivers.
           </p>
         </div>
 
@@ -97,10 +96,12 @@ export default function Home() {
               </CardContent>
               <div className="p-8 pt-0 mt-auto">
                 <Button 
+                  asChild
                   className="w-full h-14 text-xl font-black rounded-2xl gap-3 shadow-2xl shadow-primary/20 hover:shadow-primary/40 transition-all" 
-                  onClick={() => handleRoleEntry(role.role)}
                 >
-                  Enter Portal <ArrowRight className="h-6 w-6" />
+                  <Link href={`/login?role=${role.role}`}>
+                    Enter Portal <ArrowRight className="h-6 w-6" />
+                  </Link>
                 </Button>
               </div>
             </Card>
@@ -131,9 +132,9 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6 text-muted-foreground text-sm font-bold">
           <div>© 2026 ParkWise Smart Systems.</div>
           <div className="flex gap-8">
-            <a href="#" className="hover:text-primary">Privacy</a>
-            <a href="#" className="hover:text-primary">Terms</a>
-            <a href="#" className="hover:text-primary">Support</a>
+            <a href="#" className="hover:text-primary transition-colors">Privacy</a>
+            <a href="#" className="hover:text-primary transition-colors">Terms</a>
+            <a href="#" className="hover:text-primary transition-colors">Support</a>
           </div>
         </div>
       </footer>

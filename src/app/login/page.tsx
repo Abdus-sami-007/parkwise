@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -7,22 +6,26 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ParkingCircle, ArrowRight, Home, User } from "lucide-react";
+import { ParkingCircle, ArrowRight, Home, Mail, Lock } from "lucide-react";
 import { useParkStore } from "@/hooks/use-park-store";
 import Link from "next/link";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function LoginPage() {
   const searchParams = useSearchParams();
-  const requestedRole = searchParams.get('role') || 'customer';
+  const defaultRole = searchParams.get('role') || 'customer';
   
-  const [identifier, setIdentifier] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState(defaultRole);
+  
   const router = useRouter();
   const login = useParkStore(state => state.login);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    login(requestedRole, identifier || `${requestedRole}@example.com`, identifier || requestedRole);
-    router.replace(`/dashboard/${requestedRole}`);
+    login(role, email, "Demo User");
+    router.replace(`/dashboard/${role}`);
   };
 
   return (
@@ -33,37 +36,68 @@ export default function LoginPage() {
         </Link>
       </Button>
       
-      <Card className="w-full max-w-md shadow-2xl border-none">
+      <Card className="w-full max-w-md shadow-2xl border-none bg-card/50 backdrop-blur-md">
         <CardHeader className="text-center">
-          <div className="mx-auto bg-primary p-4 rounded-3xl shadow-xl shadow-primary/20 mb-6">
+          <div className="mx-auto bg-primary p-4 rounded-3xl shadow-xl shadow-primary/20 mb-6 w-fit">
             <ParkingCircle className="h-10 w-10 text-white" />
           </div>
-          <CardTitle className="text-3xl font-black font-headline tracking-tight">System Entry</CardTitle>
-          <CardDescription>Enter as a {requestedRole}</CardDescription>
+          <CardTitle className="text-3xl font-black font-headline tracking-tight">Sign In</CardTitle>
+          <CardDescription>Enter your credentials to access ParkWise</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label>Email or Username</Label>
+              <Label>Account Role</Label>
+              <Select value={role} onValueChange={setRole}>
+                <SelectTrigger className="h-12 rounded-xl">
+                  <SelectValue placeholder="Select your role" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-none shadow-2xl">
+                  <SelectItem value="customer">Driver (Customer)</SelectItem>
+                  <SelectItem value="owner">Property Owner</SelectItem>
+                  <SelectItem value="guard">Security Guard</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Email Address</Label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input 
-                  className="pl-10 h-12" 
-                  placeholder="e.g. demo_user" 
-                  value={identifier} 
-                  onChange={(e) => setIdentifier(e.target.value)} 
+                  type="email"
+                  className="pl-12 h-12 rounded-xl" 
+                  placeholder="name@example.com" 
+                  value={email} 
+                  onChange={(e) => setEmail(e.target.value)} 
                   required 
                 />
               </div>
             </div>
-            <Button type="submit" className="w-full h-12 text-lg font-bold rounded-xl shadow-lg">
-              Enter Dashboard <ArrowRight className="h-5 w-5 ml-2" />
+
+            <div className="space-y-2">
+              <Label>Password</Label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  type="password"
+                  className="pl-12 h-12 rounded-xl" 
+                  placeholder="••••••••" 
+                  value={password} 
+                  onChange={(e) => setPassword(e.target.value)} 
+                  required 
+                />
+              </div>
+            </div>
+
+            <Button type="submit" className="w-full h-14 text-lg font-black rounded-2xl shadow-lg mt-4 transition-all hover:scale-[1.02]">
+              Sign In <ArrowRight className="h-5 w-5 ml-2" />
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="justify-center">
+        <CardFooter className="flex flex-col gap-4 text-center">
           <p className="text-sm text-muted-foreground">
-            No password required for prototype access.
+            Don't have an account? <Link href="/signup" className="text-primary font-bold hover:underline">Sign up for free</Link>
           </p>
         </CardFooter>
       </Card>
